@@ -15,9 +15,9 @@ import re
 
 from fontTools.ttLib import TTFont
 from fontTools.ttLib.tables._n_a_m_e import NameRecord
-import core.core_console_styles as cs
-from core.core_filename_parts_parser import parse_filename
-from core.core_name_policies import (
+import FontCore.core_console_styles as cs
+from FontCore.core_filename_parts_parser import parse_filename
+from FontCore.core_name_policies import (
     build_id1,
     normalize_style_and_slope_for_id1_id4,
     get_regular_equivalent_for_families,
@@ -25,7 +25,7 @@ from core.core_name_policies import (
     normalize_nfc,
     detect_compound_modifier_patterns,
 )
-from core.core_ttx_table_io import (
+from FontCore.core_ttx_table_io import (
     load_ttx,
     write_ttx,
     find_name_table,
@@ -35,8 +35,8 @@ from core.core_ttx_table_io import (
     deduplicate_namerecords_ttx,
     deduplicate_namerecords_binary,
 )
-from core.core_file_collector import SUPPORTED_EXTENSIONS, collect_font_files
-from core.core_nameid_replacer_base import (
+from FontCore.core_file_collector import SUPPORTED_EXTENSIONS, collect_font_files
+from FontCore.core_nameid_replacer_base import (
     run_workflow,
     show_parsing,
     show_saved,
@@ -217,7 +217,7 @@ def process_ttx_file(
             deduplicate_namerecords_ttx(name_table, 1)
             # TTX CFF/CFF2 name sync after updates
             try:
-                from core.core_ttx_table_io import sync_cff_names_ttx
+                from FontCore.core_ttx_table_io import sync_cff_names_ttx
 
                 cff_changed = sync_cff_names_ttx(root)
                 if cff_changed:

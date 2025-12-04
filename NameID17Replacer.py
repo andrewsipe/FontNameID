@@ -14,11 +14,11 @@ from pathlib import Path
 
 from fontTools.ttLib import TTFont
 from fontTools.ttLib.tables._n_a_m_e import NameRecord
-import core.core_console_styles as cs
-from core.core_filename_parts_parser import parse_filename
-from core.core_name_policies import build_id17, normalize_nfc
-from core.core_name_policies import detect_compound_modifier_patterns
-from core.core_ttx_table_io import (
+import FontCore.core_console_styles as cs
+from FontCore.core_filename_parts_parser import parse_filename
+from FontCore.core_name_policies import build_id17, normalize_nfc
+from FontCore.core_name_policies import detect_compound_modifier_patterns
+from FontCore.core_ttx_table_io import (
     load_ttx,
     write_ttx,
     find_name_table,
@@ -32,8 +32,8 @@ from core.core_ttx_table_io import (
     get_stat_elided_fallback_name_binary,
     compute_stat_default_style_name_binary,
 )
-from core.core_file_collector import SUPPORTED_EXTENSIONS
-from core.core_nameid_replacer_base import (
+from FontCore.core_file_collector import SUPPORTED_EXTENSIONS
+from FontCore.core_nameid_replacer_base import (
     run_workflow,
     show_parsing,
     show_saved,
@@ -74,7 +74,7 @@ def _flag_provided(short: str, long: str) -> bool:
     return (short in argv) or (long in argv)
 
 
-"""Constructors now imported from core.core_name_policies (build_id17)."""
+"""Constructors now imported from FontCore.core_name_policies (build_id17)."""
 
 
 def _has_italic_like(text: str | None) -> bool:
@@ -204,7 +204,7 @@ def process_ttx_file(
         # If truly variable (fvar+STAT), compute default name via STAT/fvar defaults, falling back to ElidedFallback
         if is_variable_font_ttx(root):
             # For variable fonts, use STAT computation or simple default
-            from core.core_ttx_table_io import compute_stat_default_style_name_ttx
+            from FontCore.core_ttx_table_io import compute_stat_default_style_name_ttx
 
             computed = compute_stat_default_style_name_ttx(root, name_table)
             if not computed:
@@ -421,7 +421,7 @@ def process_binary_font(
             deduplicate_namerecords_binary(name_table, 17)
             # Binary preservation for variable fonts (fvar+STAT)
             try:
-                from core.core_ttx_table_io import (
+                from FontCore.core_ttx_table_io import (
                     preserve_low_nameids_in_fvar_stat_binary,
                 )
 

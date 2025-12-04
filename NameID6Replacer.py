@@ -15,8 +15,8 @@ import xml.etree.ElementTree as ET
 from fontTools.ttLib import TTFont
 from fontTools.ttLib.tables._n_a_m_e import NameRecord
 
-import core.core_console_styles as cs
-from core.core_nameid_replacer_base import (
+import FontCore.core_console_styles as cs
+from FontCore.core_nameid_replacer_base import (
     run_workflow,
     show_warning,
     show_unchanged,
@@ -28,15 +28,15 @@ from core.core_nameid_replacer_base import (
     show_preview,
     show_parsing,
 )
-from core.core_name_policies import (
+from FontCore.core_name_policies import (
     sanitize_postscript,
     sync_cff_names_binary,
 )
-from core.core_variable_font_detection import (
+from FontCore.core_variable_font_detection import (
     is_variable_font_ttx,
     is_variable_font_binary,
 )
-from core.core_ttx_table_io import (
+from FontCore.core_ttx_table_io import (
     load_ttx,
     write_ttx,
     find_name_table,
@@ -44,7 +44,7 @@ from core.core_ttx_table_io import (
     deduplicate_namerecords_ttx,
     deduplicate_namerecords_binary,
 )
-from core.core_file_collector import SUPPORTED_EXTENSIONS
+from FontCore.core_file_collector import SUPPORTED_EXTENSIONS
 
 # Get the themed console singleton
 console = cs.get_console()
@@ -57,7 +57,7 @@ def get_postscript_name_from_filename(filepath):
     return filename.replace(" ", "")
 
 
-"""PostScript sanitization imported from core.core_name_policies.sanitize_postscript"""
+"""PostScript sanitization imported from FontCore.core_name_policies.sanitize_postscript"""
 
 
 # Optional better XML parser that preserves comments/whitespace
@@ -261,7 +261,7 @@ def process_ttx_file(
             deduplicate_namerecords_ttx(name_table, 6)
             # Sync CFF/CFF2 FontName/FullName/FamilyName fields from updated name table
             try:
-                from core.core_ttx_table_io import (
+                from FontCore.core_ttx_table_io import (
                     sync_cff_names_ttx,
                     set_cff_fontname_ttx,
                 )

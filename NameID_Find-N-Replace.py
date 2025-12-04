@@ -20,9 +20,9 @@ from typing import Dict, List, Tuple
 
 from fontTools.ttLib import TTFont
 
-import core.core_console_styles as cs
-from core.core_file_collector import collect_font_files
-from core.core_nameid_replacer_base import (
+import FontCore.core_console_styles as cs
+from FontCore.core_file_collector import collect_font_files
+from FontCore.core_nameid_replacer_base import (
     prompt_confirmation,
     show_dry_run_notice,
     show_file_list,

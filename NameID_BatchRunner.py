@@ -24,7 +24,7 @@ import importlib
 from typing import List, Dict
 from pathlib import Path
 
-import core.core_console_styles as cs
+import FontCore.core_console_styles as cs
 
 # Get the themed console singleton
 console = cs.get_console()

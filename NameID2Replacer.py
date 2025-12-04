@@ -16,9 +16,9 @@ from pathlib import Path
 import xml.etree.ElementTree as ET
 from fontTools.ttLib import TTFont
 from fontTools.ttLib.tables._n_a_m_e import NameRecord
-import core.core_console_styles as cs
-from core.core_file_collector import SUPPORTED_EXTENSIONS
-from core.core_nameid_replacer_base import (
+import FontCore.core_console_styles as cs
+from FontCore.core_file_collector import SUPPORTED_EXTENSIONS
+from FontCore.core_nameid_replacer_base import (
     run_workflow,
     show_parsing,
     show_saved,
@@ -31,7 +31,7 @@ from core.core_nameid_replacer_base import (
     is_variable_font_ttx,
     is_variable_font_binary,
 )
-from core.core_ttx_table_io import (
+from FontCore.core_ttx_table_io import (
     load_ttx,
     write_ttx,
     find_name_table,
@@ -43,7 +43,7 @@ from core.core_ttx_table_io import (
 # Get the themed console singleton
 console = cs.get_console()
 
-# Labels and helpers are now imported from core.core_console_styles
+# Labels and helpers are now imported from FontCore.core_console_styles
 
 # Optional better XML parser that preserves comments/whitespace
 try:
@@ -463,7 +463,7 @@ def process_binary_font(
 
             # Binary preservation for variable fonts (fvar+STAT)
             try:
-                from core.core_ttx_table_io import (
+                from FontCore.core_ttx_table_io import (
                     preserve_low_nameids_in_fvar_stat_binary,
                 )
 

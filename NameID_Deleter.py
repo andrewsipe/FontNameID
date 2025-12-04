@@ -15,9 +15,9 @@ import xml.etree.ElementTree as ET
 from typing import Iterable
 from fontTools.ttLib import TTFont
 
-import core.core_console_styles as cs
-from core.core_file_collector import collect_font_files, SUPPORTED_EXTENSIONS
-from core.core_nameid_replacer_base import (
+import FontCore.core_console_styles as cs
+from FontCore.core_file_collector import collect_font_files, SUPPORTED_EXTENSIONS
+from FontCore.core_nameid_replacer_base import (
     show_file_list,
     show_dry_run_notice,
     prompt_confirmation,
