@@ -14,6 +14,14 @@ from pathlib import Path
 
 from fontTools.ttLib import TTFont
 from fontTools.ttLib.tables._n_a_m_e import NameRecord
+
+# Add project root to path for FontCore imports (works for root and subdirectory scripts)
+_project_root = Path(__file__).parent
+while not (_project_root / "FontCore").exists() and _project_root.parent != _project_root:
+    _project_root = _project_root.parent
+if str(_project_root) not in sys.path:
+    sys.path.insert(0, str(_project_root))
+
 import FontCore.core_console_styles as cs
 from FontCore.core_filename_parts_parser import parse_filename
 from FontCore.core_name_policies import build_id17, normalize_nfc
