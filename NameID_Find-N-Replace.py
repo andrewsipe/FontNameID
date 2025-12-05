@@ -8,7 +8,7 @@ Features:
 - Targets only the 'name' table of fonts
 - Case-sensitive by default; -i/--case-insensitive to toggle
 - Optional regex mode via -re/--regex
-- Supports chaining multiple -f/--find and -r/--replace pairs in order
+- Supports chaining multiple -F/--find and -R/--replace pairs in order
 """
 
 import argparse
@@ -1120,7 +1120,7 @@ EXAMPLES:
 
         # Add preset-specific arguments
         for find_text, replace_text in preset["find_replace_pairs"]:
-            new_argv.extend(["-f", find_text, "-r", replace_text])
+            new_argv.extend(["-F", find_text, "-R", replace_text])
 
         if preset["case_insensitive"]:
             new_argv.append("-i")
