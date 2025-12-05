@@ -20,13 +20,6 @@ from typing import Dict, List, Tuple
 
 from fontTools.ttLib import TTFont
 
-# Add project root to path for FontCore imports (works for root and subdirectory scripts)
-_project_root = Path(__file__).parent
-while not (_project_root / "FontCore").exists() and _project_root.parent != _project_root:
-    _project_root = _project_root.parent
-if str(_project_root) not in sys.path:
-    sys.path.insert(0, str(_project_root))
-
 import FontCore.core_console_styles as cs
 from FontCore.core_file_collector import collect_font_files
 from FontCore.core_nameid_replacer_base import (
@@ -35,6 +28,15 @@ from FontCore.core_nameid_replacer_base import (
     show_file_list,
     show_processing_summary,
 )
+
+# Add project root to path for FontCore imports (works for root and subdirectory scripts)
+_project_root = Path(__file__).parent
+while (
+    not (_project_root / "FontCore").exists() and _project_root.parent != _project_root
+):
+    _project_root = _project_root.parent
+if str(_project_root) not in sys.path:
+    sys.path.insert(0, str(_project_root))
 
 # Non-recursive, targeted formats for this tool
 LOCAL_SUPPORTED_EXTENSIONS = {".ttf", ".otf", ".woff", ".woff2"}
@@ -1050,14 +1052,14 @@ EXAMPLES:
     )
     # New explicit options (appendable)
     parser.add_argument(
-        "-f",
+        "-F",
         "--find",
         dest="find_opt",
         action="append",
         help="Text or pattern to find (repeatable; ordered)",
     )
     parser.add_argument(
-        "-r",
+        "-R",
         "--replace",
         dest="replace_opt",
         action="append",
