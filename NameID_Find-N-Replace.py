@@ -30,6 +30,7 @@ from FontCore.core_nameid_replacer_base import (
 )
 
 # Add project root to path for FontCore imports (works for root and subdirectory scripts)
+# ruff: noqa: E402
 _project_root = Path(__file__).parent
 while (
     not (_project_root / "FontCore").exists() and _project_root.parent != _project_root
