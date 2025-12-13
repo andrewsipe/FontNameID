@@ -47,7 +47,7 @@ PRESETS = {
     "RemoveModifierSpaces": {
         "find_replace_pairs": [
             (
-                r"(Semi|Demi|Ultra|Extra|X|Super) (?!Italic|Oblique|Slant|Back|Retalic|Reverse|Reclined|SmallCaps)",
+                r"(Semi|Demi|Ultra|Extra|X|Super) (?!Italic|Oblique|Slant|Back|Retalic|Reverse|Reclined|Smallcaps)",
                 r"\1",
             )
         ],
@@ -63,6 +63,11 @@ PRESETS = {
     },
     "TrailingSpaces": {
         "find_replace_pairs": [(" $", "")],
+        "case_insensitive": False,
+        "regex": True,
+    },
+    "3D": {
+        "find_replace_pairs": [(r"\b3\s+D\b", "3D")],
         "case_insensitive": False,
         "regex": True,
     },
@@ -1012,6 +1017,7 @@ PRESETS:
   RemoveModifierSpaces   Removes trailing space after modifiers in IDs 1, 4, 16 and 17
   Spaces                 Normalize double spaces to single spaces
   TrailingSpaces         Remove trailing spaces (uses regex)
+  3D                     Join standalone "3 D" to "3D" (safeguarded against longer words)
 
 EXAMPLES:
   Basic replacement:
@@ -1035,6 +1041,8 @@ EXAMPLES:
   Using presets:
     %(prog)s fonts/ Spaces
     %(prog)s fonts/ RemoveModifierSpaces
+    %(prog)s fonts/ 3D
+    %(prog)s fonts/ 3D RemoveModifierSpaces
 
   Target specific name IDs:
     %(prog)s font.ttf -f "Old" -r "New" --ids 1,2,4
@@ -1112,51 +1120,94 @@ EXAMPLES:
     )
 
     # Check for preset mode first (before parsing)
-    if len(sys.argv) > 1 and sys.argv[1] in PRESETS:
-        preset_name = sys.argv[1]
-        preset = PRESETS[preset_name]
+    # Scan through positional arguments to find all preset names
+    detected_presets = []
+    remaining_positional = []
 
+    # Skip script name, check remaining args
+    for arg in sys.argv[1:]:
+        # Stop at first flag/option (starts with -)
+        if arg.startswith("-"):
+            remaining_positional.append(arg)
+        elif arg in PRESETS:
+            detected_presets.append(arg)
+        else:
+            remaining_positional.append(arg)
+
+    if detected_presets:
         # Build new argv
         new_argv = [sys.argv[0]]
 
-        # Add preset-specific arguments
-        for find_text, replace_text in preset["find_replace_pairs"]:
+        # Collect all find_replace_pairs from all presets
+        all_find_replace_pairs = []
+        any_case_insensitive = False
+        any_regex = False
+        combined_default_ids = None
+
+        for preset_name in detected_presets:
+            preset = PRESETS[preset_name]
+            all_find_replace_pairs.extend(preset["find_replace_pairs"])
+
+            if preset.get("case_insensitive", False):
+                any_case_insensitive = True
+            if preset.get("regex", False):
+                any_regex = True
+
+            # Combine default_ids (use first non-None, or merge if needed)
+            if preset.get("default_ids") is not None:
+                if combined_default_ids is None:
+                    combined_default_ids = preset["default_ids"]
+                else:
+                    # Merge sets if multiple presets have default_ids
+                    combined_default_ids = list(
+                        set(combined_default_ids) | set(preset["default_ids"])
+                    )
+
+        # Add all find_replace_pairs as -F/-R pairs
+        for find_text, replace_text in all_find_replace_pairs:
             new_argv.extend(["-F", find_text, "-R", replace_text])
 
-        if preset["case_insensitive"]:
+        if any_case_insensitive:
             new_argv.append("-i")
-        if preset["regex"]:
+        if any_regex:
             new_argv.append("-re")
 
-        # Add default_ids if preset has them and --ids not already specified
-        if "default_ids" in preset and preset["default_ids"] is not None:
+        # Add default_ids if any preset has them and --ids not already specified
+        if combined_default_ids is not None:
             # Check if --ids is already in remaining args
-            remaining_args = sys.argv[2:]
-            has_ids_flag = any(arg in ("--ids", "-ids") for arg in remaining_args)
+            has_ids_flag = any(arg in ("--ids", "-ids") for arg in remaining_positional)
             if not has_ids_flag:
-                ids_str = ",".join(str(id) for id in preset["default_ids"])
+                ids_str = ",".join(str(id) for id in sorted(combined_default_ids))
                 new_argv.extend(["--ids", ids_str])
 
-        # Add remaining args (skip the preset name)
-        new_argv.extend(sys.argv[2:])
+        # Add remaining args (excluding preset names)
+        new_argv.extend(remaining_positional)
 
         sys.argv = new_argv
 
         # Parse with new argv
         args = parser.parse_args()
 
-        # Build display message
-        display_parts = []
-        for find_text, replace_text in preset["find_replace_pairs"]:
-            display_parts.append(f'"{find_text}" -> "{replace_text}"')
-        if preset["case_insensitive"]:
-            display_parts.append("-i")
-        if preset["regex"]:
-            display_parts.append("-re")
+        # Build display message for all presets
+        preset_display_parts = []
+        for preset_name in detected_presets:
+            preset = PRESETS[preset_name]
+            preset_ops = []
+            for find_text, replace_text in preset["find_replace_pairs"]:
+                preset_ops.append(f'"{find_text}" -> "{replace_text}"')
+            preset_display_parts.append(f"{preset_name}({', '.join(preset_ops)})")
 
-        cs.StatusIndicator("info").add_message(
-            f"Using '{preset_name}' preset: {' '.join(display_parts)}"
-        ).emit(cs.get_console())
+        settings_parts = []
+        if any_case_insensitive:
+            settings_parts.append("-i")
+        if any_regex:
+            settings_parts.append("-re")
+
+        display_msg = f"Using preset(s): {', '.join(detected_presets)}"
+        if settings_parts:
+            display_msg += f" ({' '.join(settings_parts)})"
+
+        cs.StatusIndicator("info").add_message(display_msg).emit(cs.get_console())
     else:
         # No preset - parse normally
         args = parser.parse_args()
