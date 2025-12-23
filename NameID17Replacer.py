@@ -284,7 +284,7 @@ def process_ttx_file(
                     filepath, compound_warning_data, dry_run, console
                 )
             show_saved(filepath, dry_run, console)
-        return True
+        return changed
 
     except Exception as e:
         show_error(filepath, f"Error processing TTX file: {e}", dry_run, console)
@@ -457,7 +457,7 @@ def process_binary_font(
                 )
             show_saved(filepath, dry_run, console)
         font.close()
-        return True
+        return changed
 
     except Exception as e:
         show_error(filepath, f"Error processing font file: {e}", dry_run, console)

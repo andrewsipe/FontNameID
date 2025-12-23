@@ -29,7 +29,6 @@ import FontCore.core_console_styles as cs
 from FontCore.core_file_collector import collect_font_files, SUPPORTED_EXTENSIONS
 from FontCore.core_nameid_replacer_base import (
     show_file_list,
-    show_dry_run_notice,
     prompt_confirmation,
     show_processing_summary,
 )
@@ -173,7 +172,8 @@ def process_ttx_file(
                     "Kept only Windows/English/Latin records"
                 ).emit(console)
 
-        return True
+        # Return True if changes were made, False if no changes
+        return len(to_remove) > 0
     except Exception as e:
         cs.StatusIndicator("error").add_file(
             filepath, filename_only=False
@@ -276,8 +276,10 @@ def process_binary_font(
                     "Kept only Windows/English/Latin records"
                 ).emit(console)
 
+        # Return True if changes were made, False if no changes
+        file_changed = kept != list(name_table.names)
         font.close()
-        return True
+        return file_changed
     except Exception as e:
         cs.StatusIndicator("error").add_file(
             filepath, filename_only=False
@@ -379,9 +381,7 @@ def process_files(file_paths, script_args, batch_context=False):
     cs.fmt_preflight_checklist("NameID Deleter", operations, console=console)
 
     # Show dry run indicator
-    if script_args.dry_run:
-        cs.emit("")
-        show_dry_run_notice(console)
+    # Note: DRY prefix will be automatically added to all StatusIndicator messages when dry_run=True
 
     # Confirm
     if not script_args.yes:

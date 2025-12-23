@@ -24,7 +24,6 @@ import FontCore.core_console_styles as cs
 from FontCore.core_file_collector import collect_font_files
 from FontCore.core_nameid_replacer_base import (
     prompt_confirmation,
-    show_dry_run_notice,
     show_file_list,
     show_processing_summary,
 )
@@ -912,9 +911,8 @@ def process_files(file_paths, script_args, batch_context=False):
     files_to_process = None
 
     # --dry-run mode: Show preview only, then exit
+    # Note: DRY prefix will be automatically added to all StatusIndicator messages when dry_run=True
     if script_args.dry_run:
-        cs.emit("")
-        show_dry_run_notice(console)
         cs.emit("")
 
         # Run preview to see what would change

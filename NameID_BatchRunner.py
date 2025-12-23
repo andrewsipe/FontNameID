@@ -605,7 +605,8 @@ def _run_deletion_prepass(args: argparse.Namespace) -> int:
 
 def _preview_operations(ids: List[int], args: argparse.Namespace) -> None:
     """Show what will be processed by each script"""
-    cs.StatusIndicator("info").add_message("Dry-run preview:").emit(console)
+    # DRY prefix will be added automatically by StatusIndicator when dry_run=True
+    # No need for separate "Dry-run preview:" message
     cs.emit("", console=console)
 
     # Show deletion pre-pass if requested

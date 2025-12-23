@@ -154,7 +154,7 @@ def process_ttx_file(filepath, family, designer, string_override=None, dry_run=F
                 else:
                     tree.write(filepath, encoding="utf-8", xml_declaration=True)
             show_saved(filepath, dry_run, console)
-        return True
+        return file_changed
 
     except Exception as e:
         show_error(filepath, f"Error processing TTX file: {e}", dry_run, console)
@@ -247,7 +247,7 @@ def process_file(filepath, family, designer, string_override=None, dry_run=False
 
     # Show preview label in dry-run mode
     if dry_run:
-        show_preview(filepath, True, console)
+        show_preview(filepath, dry_run, console)
 
     show_parsing(filepath, dry_run, console)
 

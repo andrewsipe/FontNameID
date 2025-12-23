@@ -258,6 +258,7 @@ def process_ttx_file(
             './/namerecord[@nameID="0"][@platformID="3"][@platEncID="1"][@langID="0x409"]'
         )
 
+        file_changed = False
         if namerecord_0 is not None:
             # Capture old value before updating
             old_text = namerecord_0.text.strip() if namerecord_0.text else ""
@@ -268,6 +269,7 @@ def process_ttx_file(
                 if not dry_run:
                     namerecord_0.text = f"\n      {new_name}\n    "
                 show_updated(0, filepath, old_text, new_name, dry_run, console)
+                file_changed = True
         else:
             # Create new namerecord if it doesn't exist
             new_record = (
@@ -283,9 +285,10 @@ def process_ttx_file(
                 new_record.text = f"\n      {new_name}\n    "
                 _insert_namerecord_in_order(name_table, new_record)
             show_created(0, filepath, new_name, dry_run, console)
+            file_changed = True
 
-        # Deduplicate and write back without reformatting (preserve existing whitespace)
-        if not dry_run:
+        # Deduplicate and write back only if changes were made
+        if file_changed and not dry_run:
             deduplicate_namerecords_ttx(name_table, "0", new_name)
             _adjust_ttx_whitespace(name_table)
             if LXML_AVAILABLE:
@@ -295,8 +298,9 @@ def process_ttx_file(
             else:
                 tree.write(filepath, encoding="utf-8", xml_declaration=True)
 
-        show_saved(filepath, dry_run, console)
-        return True
+        if file_changed:
+            show_saved(filepath, dry_run, console)
+        return file_changed
 
     except Exception as e:
         show_error(filepath, f"Error processing TTX file: {e}", dry_run, console)
@@ -356,6 +360,7 @@ def process_binary_font(
 
         # Look for existing nameID=0 record with the specific platform/encoding
         found = False
+        file_changed = False
         for record in name_table.names:
             if (
                 record.nameID == 0
@@ -379,6 +384,7 @@ def process_binary_font(
                     if not dry_run:
                         record.string = new_name
                     found = True
+                    file_changed = True
                     show_updated(0, filepath, old_text, new_name, dry_run, console)
                 break
 
@@ -393,15 +399,17 @@ def process_binary_font(
                 new_record.string = new_name
                 name_table.names.append(new_record)
             show_created(0, filepath, new_name, dry_run, console)
+            file_changed = True
 
-        # Deduplicate and save the font
-        if not dry_run:
+        # Deduplicate and save the font only if changes were made
+        if file_changed and not dry_run:
             deduplicate_namerecords_binary(name_table, 0, new_name)
             font.save(filepath)
 
-        show_saved(filepath, dry_run, console)
+        if file_changed:
+            show_saved(filepath, dry_run, console)
         font.close()
-        return True
+        return file_changed
 
     except Exception as e:
         show_error(filepath, f"Error processing font file: {e}", dry_run, console)

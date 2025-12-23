@@ -286,7 +286,7 @@ def process_ttx_file(
             if not dry_run:
                 write_ttx(tree, filepath, using_lxml)
             show_saved(filepath, dry_run, console)
-        return True
+        return file_changed
 
     except Exception as e:
         show_error(filepath, f"Error processing TTX file: {e}", dry_run, console)
@@ -395,7 +395,7 @@ def process_binary_font(
                 font.save(filepath)
             show_saved(filepath, dry_run, console)
         font.close()
-        return True
+        return file_changed
 
     except Exception as e:
         show_error(filepath, f"Error processing font file: {e}", dry_run, console)
@@ -420,7 +420,7 @@ def process_file(
 
     # Show preview label in dry-run mode
     if dry_run:
-        show_preview(filepath, True, console)
+        show_preview(filepath, dry_run, console)
 
     show_parsing(filepath, dry_run, console)
 

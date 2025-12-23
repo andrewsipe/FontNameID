@@ -186,7 +186,7 @@ def process_ttx_file(filepath, version, string_override=None, dry_run=False):
                 else:
                     tree.write(filepath, encoding="utf-8", xml_declaration=True)
             show_saved(filepath, dry_run, console)
-        return True
+        return file_changed
 
     except Exception as e:
         show_error(filepath, f"Error processing TTX file: {e}", dry_run, console)
@@ -276,7 +276,7 @@ def process_binary_font(filepath, version, string_override=None, dry_run=False):
                 font.save(filepath)
             show_saved(filepath, dry_run, console)
         font.close()
-        return True
+        return file_changed
 
     except Exception as e:
         show_error(filepath, f"Error processing font file: {e}", dry_run, console)

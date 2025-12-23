@@ -244,7 +244,7 @@ def process_ttx_file(
                     filepath, compound_warning_data, dry_run, console
                 )
             show_saved(filepath, dry_run, console)
-        return True
+        return file_changed
 
     except Exception as e:
         if error_tracker:
@@ -370,7 +370,7 @@ def process_binary_font(
                 )
             show_saved(filepath, dry_run, console)
         font.close()
-        return True
+        return file_changed
 
     except Exception as e:
         if error_tracker:
