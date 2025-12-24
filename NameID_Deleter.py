@@ -72,7 +72,7 @@ def process_ttx_file(
 ) -> bool:
     try:
         # Show processing start
-        cs.StatusIndicator("parsing").add_file(filepath, filename_only=False).emit(
+        cs.StatusIndicator("parsing").add_file(filepath, filename_only=True).emit(
             console
         )
 
@@ -152,7 +152,7 @@ def process_ttx_file(
                 else:
                     tree.write(filepath, encoding="utf-8", xml_declaration=True)
                 cs.StatusIndicator("saved").add_file(
-                    filepath, filename_only=False
+                    filepath, filename_only=True
                 ).emit(console)
         else:
             # No changes - show summary of what was looked for
@@ -190,7 +190,7 @@ def process_binary_font(
 ) -> bool:
     try:
         # Show processing start
-        cs.StatusIndicator("parsing").add_file(filepath, filename_only=False).emit(
+        cs.StatusIndicator("parsing").add_file(filepath, filename_only=True).emit(
             console
         )
 
@@ -256,7 +256,7 @@ def process_binary_font(
             if not dry_run:
                 font.save(filepath)
                 cs.StatusIndicator("saved").add_file(
-                    filepath, filename_only=False
+                    filepath, filename_only=True
                 ).emit(console)
         else:
             # No changes - show summary of what was looked for

@@ -196,7 +196,7 @@ def find_replace_in_name_table(
     """
     try:
         # Show processing start
-        cs.StatusIndicator("parsing").add_file(font_path, filename_only=False).emit(
+        cs.StatusIndicator("parsing").add_file(font_path, filename_only=True).emit(
             cs.get_console()
         )
 
@@ -285,7 +285,7 @@ def find_replace_in_name_table(
             if output_path is None:
                 output_path = font_path
             font.save(output_path)
-            cs.StatusIndicator("saved").add_file(output_path, filename_only=False).emit(
+            cs.StatusIndicator("saved").add_file(output_path, filename_only=True).emit(
                 cs.get_console()
             )
         elif not file_changed:
