@@ -151,9 +151,9 @@ def process_ttx_file(
                     )
                 else:
                     tree.write(filepath, encoding="utf-8", xml_declaration=True)
-                cs.StatusIndicator("saved").add_file(
-                    filepath, filename_only=True
-                ).emit(console)
+                cs.StatusIndicator("saved").add_file(filepath, filename_only=True).emit(
+                    console
+                )
         else:
             # No changes - show summary of what was looked for
             cs.StatusIndicator("unchanged").add_file(
@@ -255,9 +255,9 @@ def process_binary_font(
             # Save file (unless dry run)
             if not dry_run:
                 font.save(filepath)
-                cs.StatusIndicator("saved").add_file(
-                    filepath, filename_only=True
-                ).emit(console)
+                cs.StatusIndicator("saved").add_file(filepath, filename_only=True).emit(
+                    console
+                )
         else:
             # No changes - show summary of what was looked for
             cs.StatusIndicator("unchanged").add_file(
