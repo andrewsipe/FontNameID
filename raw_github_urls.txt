@@ -1,4 +1,6 @@
 # Root directory
+https://raw.githubusercontent.com/andrewsipe/FontNameID/main/.gitmodules
+https://raw.githubusercontent.com/andrewsipe/FontNameID/main/FontCore
 https://raw.githubusercontent.com/andrewsipe/FontNameID/main/NameID0Replacer.py
 https://raw.githubusercontent.com/andrewsipe/FontNameID/main/NameID10Replacer.py
 https://raw.githubusercontent.com/andrewsipe/FontNameID/main/NameID11Replacer.py
