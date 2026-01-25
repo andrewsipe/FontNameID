@@ -275,7 +275,7 @@ def process_files(file_paths, script_args, batch_context=False):
         return process_file(filepath, args.license, args.string, dry_run)
 
     # Use base workflow
-    return run_workflow(
+    result = run_workflow(
         file_paths=file_paths,
         script_args=script_args,
         process_file_fn=process_single_file,
@@ -285,6 +285,12 @@ def process_files(file_paths, script_args, batch_context=False):
         operations=operations,
         batch_context=batch_context,
     )
+
+    # Return appropriate format based on context
+    if batch_context:
+        return result  # Return dict for BatchRunner
+    else:
+        return result.get("exit_code", 1)  # Return int for standalone
 
 
 # Flag mapping for explicit syntax (--id13:flagname=value)

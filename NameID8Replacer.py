@@ -99,7 +99,7 @@ def process_ttx_file(filepath, manufacturer, string_override=None, dry_run=False
 
         # Find namerecord with nameID="8"
         namerecord_8 = name_table.find(
-            './/namerecord[@nameID="8"][@platformID="3"][@platEncID="1"][@langID="0x408"]'
+            './/namerecord[@nameID="8"][@platformID="3"][@platEncID="1"][@langID="0x409"]'
         )
 
         file_changed = False
