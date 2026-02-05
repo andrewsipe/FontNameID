@@ -27,8 +27,13 @@ if str(_project_root) not in sys.path:
 
 import FontCore.core_console_styles as cs
 from FontCore.core_filename_parts_parser import parse_filename
-from FontCore.core_name_policies import build_id17, normalize_nfc
-from FontCore.core_name_policies import detect_compound_modifier_patterns
+from FontCore.core_name_policies import (
+    build_id17,
+    build_id17_variable_default,
+    normalize_nfc,
+    split_variable_subfamily,
+    detect_compound_modifier_patterns,
+)
 from FontCore.core_ttx_table_io import (
     load_ttx,
     write_ttx,
@@ -223,14 +228,25 @@ def process_ttx_file(
             else:
                 fallback = computed
             if fallback:
-                # Use STAT computation result directly for variable fonts
-                new_name = fallback
-            else:
-                # Simple default: use slope from filename if available, otherwise "Regular"
-                if slope_eff:
-                    new_name = f"Regular {slope_eff}"
+                # Use STAT result; when fp enabled and we have a prefix from filename, prepend it
+                prefix_from_filename = None
+                if fp_enabled and style_eff:
+                    prefix_from_filename = split_variable_subfamily(style_eff)[0] or None
+                if prefix_from_filename:
+                    from FontCore.core_string_utils import join_nonempty
+                    new_name = join_nonempty(prefix_from_filename, fallback)
                 else:
-                    new_name = "Regular"
+                    new_name = fallback
+            else:
+                # Simple default: reappend prefix/slope from filename via policy
+                prefix_from_filename = None
+                if fp_enabled and style_eff:
+                    prefix_from_filename = split_variable_subfamily(style_eff)[0] or None
+                new_name = build_id17_variable_default(
+                    is_italic,
+                    slope_from_filename=slope_eff,
+                    prefix_from_filename=prefix_from_filename,
+                )
         else:
             new_name = build_id17(modifier, style_eff, slope_eff)
 
@@ -354,14 +370,25 @@ def process_binary_font(
             else:
                 fallback_bin = computed
             if fallback_bin:
-                # Use STAT computation result directly for variable fonts
-                new_name = fallback_bin
-            else:
-                # Simple default: use slope from filename if available, otherwise "Regular"
-                if slope_eff:
-                    new_name = f"Regular {slope_eff}"
+                # Use STAT result; when fp enabled and we have a prefix from filename, prepend it
+                prefix_from_filename = None
+                if fp_enabled and style_eff:
+                    prefix_from_filename = split_variable_subfamily(style_eff)[0] or None
+                if prefix_from_filename:
+                    from FontCore.core_string_utils import join_nonempty
+                    new_name = join_nonempty(prefix_from_filename, fallback_bin)
                 else:
-                    new_name = "Regular"
+                    new_name = fallback_bin
+            else:
+                # Simple default: reappend prefix/slope from filename via policy
+                prefix_from_filename = None
+                if fp_enabled and style_eff:
+                    prefix_from_filename = split_variable_subfamily(style_eff)[0] or None
+                new_name = build_id17_variable_default(
+                    is_italic,
+                    slope_from_filename=slope_eff,
+                    prefix_from_filename=prefix_from_filename,
+                )
         else:
             new_name = build_id17(modifier, style_eff, slope_eff)
 

@@ -31,6 +31,7 @@ from FontCore.core_name_policies import (
     build_id4,
     normalize_style_and_slope_for_id1_id4,
     get_regular_equivalent_for_families,
+    split_variable_subfamily,
     sync_cff_names_binary,
     normalize_nfc,
     detect_compound_modifier_patterns,
@@ -282,10 +283,14 @@ def process_ttx_file(
                 use_var_italic = is_italic and not (
                     fp_enabled and not italic_like_in_naming
                 )
-                # Extract slope from filename if available
+                # Preserve prefix/suffix order: prefix before "Variable", suffix after
+                prefix_from_filename = None
+                suffix_from_filename = None
                 slope_from_filename = None
-                if fp_enabled and slope:
-                    slope_from_filename = slope
+                if fp_enabled and style:
+                    prefix_from_filename, suffix_from_filename = split_variable_subfamily(style)
+                    if not prefix_from_filename and not suffix_from_filename and slope:
+                        slope_from_filename = slope
                 new_name = build_id4(
                     family,
                     None,
@@ -294,6 +299,8 @@ def process_ttx_file(
                     is_variable=True,
                     is_italic_font=use_var_italic,
                     slope_from_filename=slope_from_filename,
+                    prefix_from_filename=prefix_from_filename or None,
+                    suffix_from_filename=suffix_from_filename or None,
                 )
             else:
                 new_name = construct_full_name(family, modifier, style_eff, slope_eff)
@@ -439,10 +446,14 @@ def process_binary_font(
                 use_var_italic = is_italic and not (
                     fp_enabled and not italic_like_in_naming
                 )
-                # Extract slope from filename if available
+                # Preserve prefix/suffix order: prefix before "Variable", suffix after
+                prefix_from_filename = None
+                suffix_from_filename = None
                 slope_from_filename = None
-                if fp_enabled and slope:
-                    slope_from_filename = slope
+                if fp_enabled and style:
+                    prefix_from_filename, suffix_from_filename = split_variable_subfamily(style)
+                    if not prefix_from_filename and not suffix_from_filename and slope:
+                        slope_from_filename = slope
                 new_name = build_id4(
                     family,
                     None,
@@ -451,6 +462,8 @@ def process_binary_font(
                     is_variable=True,
                     is_italic_font=use_var_italic,
                     slope_from_filename=slope_from_filename,
+                    prefix_from_filename=prefix_from_filename or None,
+                    suffix_from_filename=suffix_from_filename or None,
                 )
             else:
                 new_name = construct_full_name(family, modifier, style_eff, slope_eff)

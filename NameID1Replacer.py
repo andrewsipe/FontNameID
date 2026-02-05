@@ -183,17 +183,20 @@ def process_ttx_file(
         if is_vf:
             family = clean_variable_family_name(family)
 
-        # Construct family name: string_override → variable fonts → family only (strip Variable tokens)
+        # Construct family name: string_override → variable (with override) → variable (no override) → override only → static
         if string_override:
             new_name = string_override
+        elif is_vf and variable_family_override is not None:
+            new_name = build_id1(
+                family, None, None, None, is_variable=True, variable_family_override=variable_family_override
+            )
+        elif is_vf:
+            new_name = build_id1(family, None, None, None, is_variable=True)
         elif variable_family_override is not None:
             base = variable_family_override if variable_family_override else family
             new_name = base
         else:
-            if is_vf:
-                new_name = build_id1(family, None, None, None, is_variable=True)
-            else:
-                new_name = construct_family_name(family, modifier, style, slope)
+            new_name = construct_family_name(family, modifier, style, slope)
 
         name_table = find_name_table(root)
         if name_table is None:
@@ -288,17 +291,20 @@ def process_binary_font(
         if is_vf:
             family = clean_variable_family_name(family)
 
-        # Construct family name (string_override → variable mode overrides to base only)
+        # Construct family name: string_override → variable (with override) → variable (no override) → override only → static
         if string_override:
             new_name = string_override
+        elif is_vf and variable_family_override is not None:
+            new_name = build_id1(
+                family, None, None, None, is_variable=True, variable_family_override=variable_family_override
+            )
+        elif is_vf:
+            new_name = build_id1(family, None, None, None, is_variable=True)
         elif variable_family_override is not None:
             base = variable_family_override if variable_family_override else family
             new_name = base
         else:
-            if is_variable_font_binary(font):
-                new_name = build_id1(family, None, None, None, is_variable=True)
-            else:
-                new_name = construct_family_name(family, modifier, style, slope)
+            new_name = construct_family_name(family, modifier, style, slope)
 
         if "name" not in font:
             show_warning(filepath, "No name table found", dry_run, console)
@@ -549,6 +555,11 @@ def process_files(file_paths, script_args, batch_context=False):
                     "compound_modifier",
                 )
 
+        # When filename parser is on, pass full "Family Subfamily" for variable ID1 (strip-only-Variable policy)
+        variable_family_override = None
+        if args.filename_parser is not None and use_family and use_style:
+            variable_family_override = f"{use_family} {use_style}".strip()
+
         return process_file(
             filepath,
             use_family,
@@ -556,7 +567,7 @@ def process_files(file_paths, script_args, batch_context=False):
             use_style,
             use_slope,
             is_variable=False,
-            variable_family_override=None,
+            variable_family_override=variable_family_override,
             string_override=args.string,
             dry_run=dry_run,
             compound_warning_data=compound_warning_data,
