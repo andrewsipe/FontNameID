@@ -152,7 +152,7 @@ def process_ttx_file(filepath, license_text, string_override=None, dry_run=False
 
     except Exception as e:
         show_error(filepath, f"Error processing TTX file: {e}", False, console)
-        return False
+        return None
 
 
 def process_binary_font(filepath, license_text, string_override=None, dry_run=False):
@@ -225,7 +225,7 @@ def process_binary_font(filepath, license_text, string_override=None, dry_run=Fa
 
     except Exception as e:
         show_error(filepath, f"Error processing font file: {e}", False, console)
-        return False
+        return None
 
 
 def process_file(filepath, license_text, string_override=None, dry_run=False):

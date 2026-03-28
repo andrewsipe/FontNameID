@@ -12,7 +12,7 @@ import sys
 import argparse
 from pathlib import Path
 import xml.etree.ElementTree as ET
-from typing import Iterable
+from typing import Iterable, Optional
 from fontTools.ttLib import TTFont
 
 # Add project root to path for FontCore imports (works for root and subdirectory scripts)
@@ -69,7 +69,7 @@ def process_ttx_file(
     delete_mac: bool,
     keep_windows_english: bool = False,
     dry_run: bool = False,
-) -> bool:
+) -> Optional[bool]:
     try:
         # Show processing start
         cs.StatusIndicator("parsing").add_file(filepath, filename_only=True).emit(
@@ -88,7 +88,7 @@ def process_ttx_file(
             cs.StatusIndicator("error").add_file(
                 filepath, filename_only=False
             ).with_explanation("No name table found").emit(console)
-            return False
+            return None
 
         target_ids_str = {str(i) for i in target_ids}
         removed_by_id: dict[str, int] = {str(i): 0 for i in target_ids}
@@ -172,13 +172,13 @@ def process_ttx_file(
                     "Kept only Windows/English/Latin records"
                 ).emit(console)
 
-        # Return True if changes were made, False if no changes
+        # True if records removed, False if nothing to remove (success)
         return len(to_remove) > 0
     except Exception as e:
         cs.StatusIndicator("error").add_file(
             filepath, filename_only=False
         ).with_explanation(f"Error processing TTX file: {e}").emit(console)
-        return False
+        return None
 
 
 def process_binary_font(
@@ -187,7 +187,7 @@ def process_binary_font(
     delete_mac: bool,
     keep_windows_english: bool = False,
     dry_run: bool = False,
-) -> bool:
+) -> Optional[bool]:
     try:
         # Show processing start
         cs.StatusIndicator("parsing").add_file(filepath, filename_only=True).emit(
@@ -200,13 +200,14 @@ def process_binary_font(
                 filepath, filename_only=False
             ).with_explanation("No name table found").emit(console)
             font.close()
-            return False
+            return None
 
         name_table = font["name"]
         removed_by_id: dict[int, int] = {i: 0 for i in target_ids}
         removed_mac_count = 0
         removed_non_windows_english_count = 0
 
+        n_before = len(name_table.names)
         kept = []
         for record in list(name_table.names):
             # Check if this is a Windows/English/Latin record
@@ -276,15 +277,14 @@ def process_binary_font(
                     "Kept only Windows/English/Latin records"
                 ).emit(console)
 
-        # Return True if changes were made, False if no changes
-        file_changed = kept != list(name_table.names)
+        file_changed = len(kept) != n_before
         font.close()
         return file_changed
     except Exception as e:
         cs.StatusIndicator("error").add_file(
             filepath, filename_only=False
         ).with_explanation(f"Error processing font file: {e}").emit(console)
-        return False
+        return None
 
 
 def process_file(
@@ -293,7 +293,7 @@ def process_file(
     delete_mac: bool,
     keep_windows_english: bool = False,
     dry_run: bool = False,
-) -> bool:
+) -> Optional[bool]:
     ext = Path(filepath).suffix.lower()
     if ext not in SUPPORTED_EXTENSIONS:
         cs.StatusIndicator("warning").add_file(
@@ -392,7 +392,6 @@ def process_files(file_paths, script_args, batch_context=False):
             return 2
 
     cs.emit("")
-    success_count = 0
     updated_count = 0
     unchanged_count = 0
     error_count = 0
@@ -405,23 +404,19 @@ def process_files(file_paths, script_args, batch_context=False):
             script_args.keep_windows_english,
             script_args.dry_run,
         )
-        if result:
-            success_count += 1
-            # Check if file was actually modified by looking for "SAVED TO" in output
-            # This is a simple heuristic - in a real implementation we'd track this better
-            if not script_args.dry_run:
-                updated_count += 1
-            else:
-                unchanged_count += 1
-        else:
+        if result is None:
             error_count += 1
+        elif result:
+            updated_count += 1
+        else:
+            unchanged_count += 1
 
     # Use standardized summary
     show_processing_summary(
         updated_count, unchanged_count, error_count, script_args.dry_run, console
     )
 
-    return 0
+    return 1 if error_count > 0 else 0
 
 
 def main() -> None:

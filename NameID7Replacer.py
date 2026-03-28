@@ -158,7 +158,7 @@ def process_ttx_file(filepath, family, designer, string_override=None, dry_run=F
 
     except Exception as e:
         show_error(filepath, f"Error processing TTX file: {e}", dry_run, console)
-        return False
+        return None
 
 
 def process_binary_font(
@@ -234,7 +234,7 @@ def process_binary_font(
 
     except Exception as e:
         show_error(filepath, f"Error processing font file: {e}", dry_run, console)
-        return False
+        return None
 
 
 def process_file(filepath, family, designer, string_override=None, dry_run=False):

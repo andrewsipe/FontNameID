@@ -418,7 +418,7 @@ def process_ttx_file(
         show_error(
             filepath, f"Error processing TTX file {filepath}: {str(e)}", False, console
         )
-        return False
+        return None
 
 
 def process_binary_font(
@@ -572,7 +572,7 @@ def process_binary_font(
         show_error(
             filepath, f"Error processing font file {filepath}: {str(e)}", False, console
         )
-        return False
+        return None
 
 
 def process_file(

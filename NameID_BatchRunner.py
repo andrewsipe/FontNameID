@@ -1303,10 +1303,17 @@ def main():
         module_name = SCRIPT_MODULES[id_num]
         stats = _run_plugin(module_name, args.paths, args)
         script_stats[id_num] = stats
-        exit_code = exit_code or stats["exit_code"]
+        ec = stats.get("exit_code", 0)
+        err_n = stats.get("errors", 0)
+        if ec == 2:
+            exit_code = 2
+        elif ec == 1 or err_n > 0:
+            exit_code = max(exit_code, 1)
+        else:
+            exit_code = max(exit_code, ec)
 
         # If script returned quit code (2), break out of the loop
-        if stats["exit_code"] == 2:
+        if stats.get("exit_code") == 2:
             cs.StatusIndicator("info").add_message(
                 "Batch operation cancelled by user"
             ).emit(console)

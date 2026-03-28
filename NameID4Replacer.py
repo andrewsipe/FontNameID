@@ -384,7 +384,7 @@ def process_ttx_file(
             dry_run,
             console,
         )
-        return False
+        return None
 
 
 def process_binary_font(
@@ -555,7 +555,7 @@ def process_binary_font(
             dry_run,
             console,
         )
-        return False
+        return None
 
 
 def process_file(
