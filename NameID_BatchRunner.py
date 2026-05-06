@@ -117,6 +117,12 @@ def _discover_script_capabilities() -> Dict[int, Dict]:
 
 SCRIPT_CAPABILITIES = _discover_script_capabilities()
 
+
+def _rewrite_deprecated_argv(argv: List[str]) -> List[str]:
+    """Map legacy --only-add-missing to --empty-fields-only (same semantics)."""
+    return ["--empty-fields-only" if a == "--only-add-missing" else a for a in argv]
+
+
 # Preset configurations for common workflows
 PRESETS = {
     "Names": {"ids": "1,2,3,4,5,6,16,17", "flags": ["-fp"], "deletions": []},
@@ -157,7 +163,7 @@ FLAG_TO_ARGS = {
     "vendor": ["-vid", "--vendID"],
     "version": ["-vs", "--version"],
     "postscript": ["-ps", "--postscript"],
-    "only_add_missing": ["--only-add-missing"],
+    "empty_fields_only": ["--empty-fields-only"],
     "filename_parser": ["-fp"],
     "string": ["-str", "--string"],
     "subfamily": ["--subfamily"],
@@ -232,8 +238,10 @@ EXPLICIT_FLAG_MAPPING = {
     # Boolean flags
     "currentyear": "--current-year",
     "cy": "-cy",
-    "only-add-missing": "--only-add-missing",
-    "only_add_missing": "--only-add-missing",
+    "only-add-missing": "--empty-fields-only",
+    "only_add_missing": "--empty-fields-only",
+    "empty-fields-only": "--empty-fields-only",
+    "empty_fields_only": "--empty-fields-only",
 }
 
 
@@ -306,7 +314,7 @@ def _find_paths_start(argv, start_pos):
         "-kwe",
         "--keep-windows-english",
         "--current-year",
-        "--only-add-missing",
+        "--empty-fields-only",
     }
 
     # Flags that take optional values
@@ -484,7 +492,7 @@ def _parse_explicit_syntax(argv):
                 "-kwe",
                 "--keep-windows-english",
                 "--current-year",
-                "--only-add-missing",
+                "--empty-fields-only",
             ]:
                 if i + 1 < len(argv) and not argv[i + 1].startswith("-"):
                     result["global_flags"].append(argv[i + 1])
@@ -536,7 +544,7 @@ def _validate_args(id_num: int, ns: argparse.Namespace) -> List[str]:
         ("vendID", ns.vendID),
         ("version", ns.version),
         ("postscript", ns.postscript),
-        ("only_add_missing", ns.only_add_missing),
+        ("empty_fields_only", ns.empty_fields_only),
         ("filename_parser", ns.filename_parser),
         ("string", ns.string),
         ("subfamily", ns.subfamily),
@@ -845,8 +853,8 @@ def _parse_flags_to_namespace(
                 i += 1
         elif flag in ["--current-year"]:
             args.current_year = True
-        elif flag in ["--only-add-missing"]:
-            args.only_add_missing = True
+        elif flag in ["--empty-fields-only"]:
+            args.empty_fields_only = True
         elif flag in ["-fp", "--filename-parser"]:
             if i + 1 < len(flag_list) and not flag_list[i + 1].startswith("-"):
                 args.filename_parser = flag_list[i + 1]
@@ -932,6 +940,8 @@ def _run_plugin(
 
 
 def main():
+    sys.argv = _rewrite_deprecated_argv(sys.argv)
+
     # Try dual-mode parsing first
     dual_mode_result = _parse_dual_mode_args(sys.argv)
 
@@ -969,7 +979,7 @@ def main():
         args.vendID = None
         args.version = None
         args.postscript = None
-        args.only_add_missing = False
+        args.empty_fields_only = "--empty-fields-only" in global_flags
         # Check for filename_parser flag
         fp_value = None
         for i, flag in enumerate(global_flags):
@@ -1100,9 +1110,13 @@ def main():
             help="Slope (e.g., 'Italic', 'Oblique') - used by nameID 1, 4, 17",
         )
         parser.add_argument(
-            "--only-add-missing",
+            "--empty-fields-only",
             action="store_true",
-            help="For nameID 16/17: only create if missing, don't update existing records",
+            dest="empty_fields_only",
+            help=(
+                "For supported nameIDs: create if missing and fill blank entries only; "
+                "do not overwrite non-blank Windows English text"
+            ),
         )
         parser.add_argument(
             "-fp",

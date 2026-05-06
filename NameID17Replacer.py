@@ -62,6 +62,7 @@ from FontCore.core_nameid_replacer_base import (
     is_variable_font_ttx,
     is_variable_font_binary,
     show_compound_modifier_warning,
+    is_blank_name_value,
 )
 
 # Get the themed console singleton
@@ -140,10 +141,10 @@ def process_ttx_file(
     modifier,
     style,
     slope,
-    create_only: bool = False,
     fp_enabled: bool = False,
     dry_run: bool = False,
     compound_warning_data=None,
+    empty_fields_only: bool = False,
 ):
     """Process TTX (XML) file to replace nameID="17" record"""
     try:
@@ -263,24 +264,19 @@ def process_ttx_file(
         namerecord_17 = find_namerecord_ttx(name_table, 17)
 
         changed = False
+        only_fill_blank = empty_fields_only
         if namerecord_17 is not None:
-            if create_only:
-                show_warning(
-                    filepath,
-                    "SKIP nameID=17 exists; create-only mode",
-                    dry_run,
-                    console,
-                )
+            # Capture old value before updating
+            old_text = namerecord_17.text.strip() if namerecord_17.text else ""
+            if old_text == new_name:
+                show_unchanged(17, filepath, old_text, dry_run, console)
+            elif only_fill_blank and not is_blank_name_value(old_text):
+                show_unchanged(17, filepath, old_text, dry_run, console)
             else:
-                # Capture old value before updating
-                old_text = namerecord_17.text.strip() if namerecord_17.text else ""
-                if old_text == new_name:
-                    show_unchanged(17, filepath, old_text, dry_run, console)
-                else:
-                    if not dry_run:
-                        update_namerecord_ttx(name_table, 17, new_name)
-                    changed = True
-                    show_updated(17, filepath, old_text, new_name, dry_run, console)
+                if not dry_run:
+                    update_namerecord_ttx(name_table, 17, new_name)
+                changed = True
+                show_updated(17, filepath, old_text, new_name, dry_run, console)
         else:
             # Create new namerecord if it doesn't exist
             if not dry_run:
@@ -312,10 +308,10 @@ def process_binary_font(
     modifier,
     style,
     slope,
-    create_only: bool = False,
     fp_enabled: bool = False,
     dry_run: bool = False,
     compound_warning_data=None,
+    empty_fields_only: bool = False,
 ):
     """Process binary font files (TTF, OTF, WOFF, WOFF2)"""
     try:
@@ -404,6 +400,7 @@ def process_binary_font(
         # Look for existing nameID=17 record with the specific platform/encoding
         found = False
         changed = False
+        only_fill_blank = empty_fields_only
         for record in name_table.names:
             if (
                 record.nameID == 17
@@ -411,33 +408,29 @@ def process_binary_font(
                 and record.platEncID == 1
                 and record.langID == 0x409
             ):
-                if create_only:
-                    found = True
-                    cs.emit(
-                        f"SKIP nameID=17 exists in {cs.fmt_file(filepath, filename_only=False)}; create-only mode",
-                        "warn",
+                # Capture old value before updating
+                try:
+                    old_text = (
+                        record.toUnicode()
+                        if hasattr(record, "toUnicode")
+                        else str(record.string)
                     )
+                except Exception:
+                    old_text = str(record.string)
+                # NFC normalize before compare/write
+                new_name = normalize_nfc(new_name) or new_name
+                if old_text == new_name:
+                    found = True
+                    show_unchanged(17, filepath, old_text, dry_run, console)
+                elif only_fill_blank and not is_blank_name_value(old_text):
+                    found = True
+                    show_unchanged(17, filepath, old_text, dry_run, console)
                 else:
-                    # Capture old value before updating
-                    try:
-                        old_text = (
-                            record.toUnicode()
-                            if hasattr(record, "toUnicode")
-                            else str(record.string)
-                        )
-                    except Exception:
-                        old_text = str(record.string)
-                    # NFC normalize before compare/write
-                    new_name = normalize_nfc(new_name) or new_name
-                    if old_text == new_name:
-                        found = True
-                        show_unchanged(17, filepath, old_text, dry_run, console)
-                    else:
-                        if not dry_run:
-                            record.string = new_name
-                        found = True
-                        changed = True
-                        show_updated(17, filepath, old_text, new_name, dry_run, console)
+                    if not dry_run:
+                        record.string = new_name
+                    found = True
+                    changed = True
+                    show_updated(17, filepath, old_text, new_name, dry_run, console)
                 break
 
         if not found:
@@ -496,11 +489,11 @@ def process_file(
     modifier,
     style,
     slope,
-    create_only: bool = False,
     fp_enabled: bool = False,
     string_override: str | None = None,
     dry_run: bool = False,
     compound_warning_data=None,
+    empty_fields_only: bool = False,
 ):
     """Process a single font file"""
     ext = Path(filepath).suffix.lower()
@@ -523,10 +516,10 @@ def process_file(
             modifier,
             use_style,
             slope,
-            create_only=create_only,
             fp_enabled=fp_enabled,
             dry_run=dry_run,
             compound_warning_data=compound_warning_data,
+            empty_fields_only=empty_fields_only,
         )
     else:
         return process_binary_font(
@@ -534,10 +527,10 @@ def process_file(
             modifier,
             use_style,
             slope,
-            create_only=create_only,
             fp_enabled=fp_enabled,
             dry_run=dry_run,
             compound_warning_data=compound_warning_data,
+            empty_fields_only=empty_fields_only,
         )
 
 
@@ -586,8 +579,11 @@ def process_files(file_paths, script_args, batch_context=False):
             f"Replace nameID 17 (Typographic Subfamily) using {', '.join(source_parts)}"
         )
 
-    if script_args.only_add_missing:
-        operations.append("Only create nameID 17 if missing (--only-add-missing)")
+    if getattr(script_args, "empty_fields_only", False):
+        operations.append(
+            "Conservative mode (--empty-fields-only): create nameID 17 if missing, "
+            "fill if blank; do not overwrite non-blank Windows English text"
+        )
 
     def process_file_wrapper(filepath, args, dry_run, stats=None):
         """Wrapper function for run_workflow"""
@@ -629,11 +625,11 @@ def process_files(file_paths, script_args, batch_context=False):
             use_modifier,
             use_style,
             use_slope,
-            create_only=args.only_add_missing,
             fp_enabled=args.filename_parser is not None,
             string_override=args.string,
             dry_run=dry_run,
             compound_warning_data=compound_warning_data,
+            empty_fields_only=getattr(args, "empty_fields_only", False),
         )
 
     result = run_workflow(
@@ -664,8 +660,10 @@ SCRIPT_FLAG_MAP = {
     "s": "-s",
     "slope": "-sl",
     "sl": "-sl",
-    "only_add_missing": "--only-add-missing",
-    "only-add-missing": "--only-add-missing",
+    "only_add_missing": "--empty-fields-only",
+    "only-add-missing": "--empty-fields-only",
+    "empty_fields_only": "--empty-fields-only",
+    "empty-fields-only": "--empty-fields-only",
     "string": "-str",
     "str": "-str",
 }
@@ -718,7 +716,15 @@ def _preprocess_explicit_syntax(argv, id_num):
     return processed
 
 
+def _rewrite_deprecated_argv(argv):
+    """Treat legacy --only-add-missing like --empty-fields-only."""
+    return [
+        "--empty-fields-only" if a == "--only-add-missing" else a for a in argv
+    ]
+
+
 def main():
+    sys.argv = _rewrite_deprecated_argv(sys.argv)
     # Preprocess explicit syntax if present
     sys.argv = _preprocess_explicit_syntax(sys.argv, 17)
 
@@ -781,9 +787,13 @@ def main():
     )
 
     parser.add_argument(
-        "--only-add-missing",
+        "--empty-fields-only",
         action="store_true",
-        help="Only add nameID 17 if missing; do not modify existing values",
+        dest="empty_fields_only",
+        help=(
+            "Create nameID 17 if missing and fill blank entries only; "
+            "do not overwrite non-blank Windows English text"
+        ),
     )
 
     parser.add_argument(
@@ -822,9 +832,9 @@ class NameID17Replacer:
         "modifier",
         "style",
         "slope",
-        "only_add_missing",
         "filename_parser",
         "string",
+        "empty_fields_only",
     }
     process_files = staticmethod(process_files)
 

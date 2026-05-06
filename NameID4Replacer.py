@@ -66,6 +66,7 @@ from FontCore.core_nameid_replacer_base import (
     is_variable_font_binary,
     clean_variable_family_name,
     show_compound_modifier_warning,
+    is_blank_name_value,
 )
 
 # Get the themed console singleton
@@ -233,6 +234,7 @@ def process_ttx_file(
     fp_enabled: bool = False,
     dry_run: bool = False,
     compound_warning_data=None,
+    empty_fields_only=False,
     error_tracker=None,
 ):
     """Process TTX (XML) file to replace nameID="4" record"""
@@ -332,6 +334,8 @@ def process_ttx_file(
             old_text = namerecord_4.text.strip() if namerecord_4.text else ""
             if old_text == new_name:
                 show_unchanged(4, filepath, old_text, dry_run, console)
+            elif empty_fields_only and not is_blank_name_value(old_text):
+                show_unchanged(4, filepath, old_text, dry_run, console)
             else:
                 # Minimal-diff update
                 if not dry_run:
@@ -398,6 +402,7 @@ def process_binary_font(
     fp_enabled: bool = False,
     dry_run: bool = False,
     compound_warning_data=None,
+    empty_fields_only=False,
     error_tracker=None,
 ):
     """Process binary font files (TTF, OTF, WOFF, WOFF2)"""
@@ -498,6 +503,9 @@ def process_binary_font(
                 if old_text == new_name:
                     found = True
                     show_unchanged(4, filepath, old_text, dry_run, console)
+                elif empty_fields_only and not is_blank_name_value(old_text):
+                    found = True
+                    show_unchanged(4, filepath, old_text, dry_run, console)
                 else:
                     if not dry_run:
                         record.string = new_name
@@ -569,6 +577,7 @@ def process_file(
     fp_enabled: bool = False,
     dry_run: bool = False,
     compound_warning_data=None,
+    empty_fields_only=False,
     error_tracker=None,  # NEW: optional error tracker
 ):
     """Process a single font file"""
@@ -592,6 +601,7 @@ def process_file(
             fp_enabled=fp_enabled,
             dry_run=dry_run,
             compound_warning_data=compound_warning_data,
+            empty_fields_only=empty_fields_only,
         )
     else:
         return process_binary_font(
@@ -605,6 +615,7 @@ def process_file(
             fp_enabled=fp_enabled,
             dry_run=dry_run,
             compound_warning_data=compound_warning_data,
+            empty_fields_only=empty_fields_only,
         )
 
 
@@ -680,6 +691,7 @@ def process_file_wrapper(filepath, args, dry_run=False, stats=None, error_tracke
         fp_enabled=(args.filename_parser is not None),
         dry_run=dry_run,
         compound_warning_data=compound_warning_data,
+        empty_fields_only=getattr(args, "empty_fields_only", False),
         error_tracker=error_tracker,
     )
 
@@ -738,6 +750,9 @@ def process_files(file_paths, script_args, batch_context=False):
         operations.append(
             cs.fmt_replacement_operation(4, "Full Font Name", ", ".join(source_parts))
         )
+
+    if getattr(script_args, "empty_fields_only", False):
+        operations.append("Only fill blank nameID 4 entries (--empty-fields-only)")
 
     # Use the base module workflow
     result = run_workflow(
@@ -891,6 +906,13 @@ def main():
     )
 
     parser.add_argument(
+        "--empty-fields-only",
+        action="store_true",
+        dest="empty_fields_only",
+        help="Only fill blank Windows English nameID 4; do not overwrite existing text",
+    )
+
+    parser.add_argument(
         "-y",
         "--yes",
         action="store_true",
@@ -929,6 +951,7 @@ class NameID4Replacer:
         "slope",
         "filename_parser",
         "string",
+        "empty_fields_only",
     }
     process_files = staticmethod(process_files)
 

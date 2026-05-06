@@ -39,6 +39,7 @@ from FontCore.core_nameid_replacer_base import (
     show_error,
     show_preview,
     show_parsing,
+    is_blank_name_value,
 )
 from FontCore.core_name_policies import (
     format_vendor_id,
@@ -266,6 +267,7 @@ def process_ttx_file(
     variable_family_override: str | None = None,
     string_override=None,
     dry_run=False,
+    empty_fields_only=False,
 ):
     """Process TTX (XML) file to replace nameID="3" record"""
     try:
@@ -375,6 +377,8 @@ def process_ttx_file(
             old_text = namerecord_3.text.strip() if namerecord_3.text else ""
             if old_text == new_name:
                 show_unchanged(3, filepath, old_text, dry_run, console)
+            elif empty_fields_only and not is_blank_name_value(old_text):
+                show_unchanged(3, filepath, old_text, dry_run, console)
             else:
                 # Format text with proper indentation (newline + 6 spaces)
                 namerecord_3.text = f"\n      {new_name}\n    "
@@ -431,6 +435,7 @@ def process_binary_font(
     variable_family_override: str | None = None,
     string_override=None,
     dry_run=False,
+    empty_fields_only=False,
 ):
     """Process binary font files (TTF, OTF, WOFF, WOFF2)"""
     try:
@@ -532,6 +537,10 @@ def process_binary_font(
                     found = True
                     show_unchanged(3, filepath, old_text, dry_run, console)
 
+                elif empty_fields_only and not is_blank_name_value(old_text):
+                    found = True
+                    show_unchanged(3, filepath, old_text, dry_run, console)
+
                 else:
                     record.string = new_name
                     found = True
@@ -585,6 +594,7 @@ def process_file(
     variable_family_override: str | None = None,
     string_override=None,
     dry_run=False,
+    empty_fields_only=False,
 ):
     """Process a single font file"""
     ext = Path(filepath).suffix.lower()
@@ -610,6 +620,7 @@ def process_file(
             variable_family_override,
             string_override,
             dry_run,
+            empty_fields_only,
         )
     else:
         return process_binary_font(
@@ -622,6 +633,7 @@ def process_file(
             variable_family_override,
             string_override,
             dry_run,
+            empty_fields_only,
         )
 
 
@@ -796,6 +808,9 @@ def process_files(file_paths, script_args, batch_context=False):
         )
         operations.extend(details)
 
+    if getattr(script_args, "empty_fields_only", False):
+        operations.append("Only fill blank nameID 3 entries (--empty-fields-only)")
+
     # Define the file processing function for this script
     def process_single_file(filepath, args, dry_run, stats=None):
         postscript_override = args.postscript
@@ -810,6 +825,7 @@ def process_files(file_paths, script_args, batch_context=False):
             variable_family_override=None,
             string_override=args.string,
             dry_run=dry_run,
+            empty_fields_only=getattr(args, "empty_fields_only", False),
         )
 
     # Use base workflow
@@ -954,6 +970,13 @@ def main():
         help="Remove Mac name records (platformID=1) before processing",
     )
 
+    parser.add_argument(
+        "--empty-fields-only",
+        action="store_true",
+        dest="empty_fields_only",
+        help="Only fill blank Windows English nameID 3; do not overwrite existing text",
+    )
+
     args = parser.parse_args()
 
     # Check if fonttools is available
@@ -985,6 +1008,7 @@ class NameID3Replacer:
         "postscript",
         "filename_parser",
         "string",
+        "empty_fields_only",
     }
     process_files = staticmethod(process_files)
 

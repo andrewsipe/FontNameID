@@ -36,6 +36,7 @@ from FontCore.core_nameid_replacer_base import (
     show_error,
     show_preview,
     show_parsing,
+    is_blank_name_value,
 )
 from FontCore.core_file_collector import SUPPORTED_EXTENSIONS
 from FontCore.core_ttx_table_io import (
@@ -83,7 +84,14 @@ def _insert_namerecord_in_order(name_table, new_record) -> None:
     name_table.insert(insert_at, new_record)
 
 
-def process_ttx_file(filepath, family, designer, string_override=None, dry_run=False):
+def process_ttx_file(
+    filepath,
+    family,
+    designer,
+    string_override=None,
+    dry_run=False,
+    empty_fields_only=False,
+):
     """Process TTX (XML) file to replace nameID="7" record"""
     try:
         if LXML_AVAILABLE:
@@ -117,6 +125,8 @@ def process_ttx_file(filepath, family, designer, string_override=None, dry_run=F
             # Capture old value before updating
             old_text = namerecord_7.text.strip() if namerecord_7.text else ""
             if old_text == new_name:
+                show_unchanged(7, filepath, old_text, dry_run, console)
+            elif empty_fields_only and not is_blank_name_value(old_text):
                 show_unchanged(7, filepath, old_text, dry_run, console)
             else:
                 # Format text with proper indentation (newline + 6 spaces)
@@ -162,7 +172,12 @@ def process_ttx_file(filepath, family, designer, string_override=None, dry_run=F
 
 
 def process_binary_font(
-    filepath, family, designer, string_override=None, dry_run=False
+    filepath,
+    family,
+    designer,
+    string_override=None,
+    dry_run=False,
+    empty_fields_only=False,
 ):
     """Process binary font files (TTF, OTF, WOFF, WOFF2)"""
     try:
@@ -203,6 +218,9 @@ def process_binary_font(
                 if old_text == new_name:
                     found = True
                     show_unchanged(7, filepath, old_text, dry_run, console)
+                elif empty_fields_only and not is_blank_name_value(old_text):
+                    found = True
+                    show_unchanged(7, filepath, old_text, dry_run, console)
                 else:
                     record.string = new_name
                     found = True
@@ -237,7 +255,14 @@ def process_binary_font(
         return None
 
 
-def process_file(filepath, family, designer, string_override=None, dry_run=False):
+def process_file(
+    filepath,
+    family,
+    designer,
+    string_override=None,
+    dry_run=False,
+    empty_fields_only=False,
+):
     """Process a single font file"""
     ext = Path(filepath).suffix.lower()
 
@@ -252,9 +277,23 @@ def process_file(filepath, family, designer, string_override=None, dry_run=False
     show_parsing(filepath, dry_run, console)
 
     if ext == ".ttx":
-        return process_ttx_file(filepath, family, designer, string_override, dry_run)
+        return process_ttx_file(
+            filepath,
+            family,
+            designer,
+            string_override,
+            dry_run,
+            empty_fields_only,
+        )
     else:
-        return process_binary_font(filepath, family, designer, string_override, dry_run)
+        return process_binary_font(
+            filepath,
+            family,
+            designer,
+            string_override,
+            dry_run,
+            empty_fields_only,
+        )
 
 
 def process_files(file_paths, script_args, batch_context=False):
@@ -291,9 +330,19 @@ def process_files(file_paths, script_args, batch_context=False):
         else:
             operations.append("Replace nameID 7 (Trademark) with: user input")
 
+    if getattr(script_args, "empty_fields_only", False):
+        operations.append("Only fill blank nameID 7 entries (--empty-fields-only)")
+
     # Define the file processing function for this script
     def process_single_file(filepath, args, dry_run, stats=None):
-        return process_file(filepath, args.family, args.designer, args.string, dry_run)
+        return process_file(
+            filepath,
+            args.family,
+            args.designer,
+            args.string,
+            dry_run,
+            getattr(args, "empty_fields_only", False),
+        )
 
     # Use base workflow
     result = run_workflow(
@@ -429,6 +478,13 @@ def main():
         help="Remove Mac name records (platformID=1) before processing",
     )
 
+    parser.add_argument(
+        "--empty-fields-only",
+        action="store_true",
+        dest="empty_fields_only",
+        help="Only fill blank Windows English nameID 7; do not overwrite existing text",
+    )
+
     args = parser.parse_args()
 
     # Check if fonttools is available
@@ -454,7 +510,7 @@ class NameID7Replacer:
 
     name_id = 7
     description = "Trademark"
-    supported_flags = {"designer", "string"}
+    supported_flags = {"designer", "string", "empty_fields_only"}
     process_files = staticmethod(process_files)
 
 

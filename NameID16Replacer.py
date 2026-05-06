@@ -58,6 +58,7 @@ from FontCore.core_nameid_replacer_base import (
     is_variable_font_binary,
     clean_variable_family_name,
     show_compound_modifier_warning,
+    is_blank_name_value,
 )
 
 # Get the themed console singleton
@@ -118,9 +119,9 @@ def process_ttx_file(
     family,
     is_variable: bool = False,
     variable_family_override: str | None = None,
-    create_only: bool = False,
     dry_run: bool = False,
     compound_warning_data=None,
+    empty_fields_only: bool = False,
 ):
     """Process TTX (XML) file to replace nameID="16" record"""
     try:
@@ -159,24 +160,19 @@ def process_ttx_file(
         family_val = normalize_nfc(family_val) or family_val
 
         changed = False
+        only_fill_blank = empty_fields_only
         if namerecord_16 is not None:
-            if create_only:
-                show_warning(
-                    filepath,
-                    "SKIP nameID=16 exists; create-only mode",
-                    dry_run,
-                    console,
-                )
+            # Capture old value before updating
+            old_text = namerecord_16.text.strip() if namerecord_16.text else ""
+            if old_text == family_val:
+                show_unchanged(16, filepath, old_text, dry_run, console)
+            elif only_fill_blank and not is_blank_name_value(old_text):
+                show_unchanged(16, filepath, old_text, dry_run, console)
             else:
-                # Capture old value before updating
-                old_text = namerecord_16.text.strip() if namerecord_16.text else ""
-                if old_text == family_val:
-                    show_unchanged(16, filepath, old_text, dry_run, console)
-                else:
-                    if not dry_run:
-                        update_namerecord_ttx(name_table, 16, family_val)
-                    changed = True
-                    show_updated(16, filepath, old_text, family_val, dry_run, console)
+                if not dry_run:
+                    update_namerecord_ttx(name_table, 16, family_val)
+                changed = True
+                show_updated(16, filepath, old_text, family_val, dry_run, console)
         else:
             # Create new namerecord if it doesn't exist
             if not dry_run:
@@ -221,9 +217,9 @@ def process_binary_font(
     family,
     is_variable: bool = False,
     variable_family_override: str | None = None,
-    create_only: bool = False,
     dry_run: bool = False,
     compound_warning_data=None,
+    empty_fields_only: bool = False,
 ):
     """Process binary font files (TTF, OTF, WOFF, WOFF2)"""
     try:
@@ -257,6 +253,7 @@ def process_binary_font(
         # Look for existing nameID=16 record with the specific platform/encoding
         found = False
         changed = False
+        only_fill_blank = empty_fields_only
         for record in name_table.names:
             if (
                 record.nameID == 16
@@ -264,37 +261,29 @@ def process_binary_font(
                 and record.platEncID == 1
                 and record.langID == 0x409
             ):
-                if create_only:
-                    found = True
-                    show_warning(
-                        filepath,
-                        "SKIP nameID=16 exists; create-only mode",
-                        dry_run,
-                        console,
+                # Capture old value before updating
+                try:
+                    old_text = (
+                        record.toUnicode()
+                        if hasattr(record, "toUnicode")
+                        else str(record.string)
                     )
+                except Exception:
+                    old_text = str(record.string)
+                # NFC normalize before compare/write
+                family_val = normalize_nfc(family_val) or family_val
+                if old_text == family_val:
+                    found = True
+                    show_unchanged(16, filepath, old_text, dry_run, console)
+                elif only_fill_blank and not is_blank_name_value(old_text):
+                    found = True
+                    show_unchanged(16, filepath, old_text, dry_run, console)
                 else:
-                    # Capture old value before updating
-                    try:
-                        old_text = (
-                            record.toUnicode()
-                            if hasattr(record, "toUnicode")
-                            else str(record.string)
-                        )
-                    except Exception:
-                        old_text = str(record.string)
-                    # NFC normalize before compare/write
-                    family_val = normalize_nfc(family_val) or family_val
-                    if old_text == family_val:
-                        found = True
-                        show_unchanged(16, filepath, old_text, dry_run, console)
-                    else:
-                        if not dry_run:
-                            record.string = family_val
-                        found = True
-                        changed = True
-                        show_updated(
-                            16, filepath, old_text, family_val, dry_run, console
-                        )
+                    if not dry_run:
+                        record.string = family_val
+                    found = True
+                    changed = True
+                    show_updated(16, filepath, old_text, family_val, dry_run, console)
                 break
 
         if not found:
@@ -340,10 +329,10 @@ def process_file(
     family,
     is_variable: bool = False,
     variable_family_override: str | None = None,
-    create_only: bool = False,
     string_override: str | None = None,
     dry_run: bool = False,
     compound_warning_data=None,
+    empty_fields_only: bool = False,
 ):
     """Process a single font file"""
     ext = Path(filepath).suffix.lower()
@@ -363,9 +352,9 @@ def process_file(
             use_family,
             is_variable,
             variable_family_override,
-            create_only=create_only,
             dry_run=dry_run,
             compound_warning_data=compound_warning_data,
+            empty_fields_only=empty_fields_only,
         )
     else:
         return process_binary_font(
@@ -373,9 +362,9 @@ def process_file(
             use_family,
             is_variable,
             variable_family_override,
-            create_only=create_only,
             dry_run=dry_run,
             compound_warning_data=compound_warning_data,
+            empty_fields_only=empty_fields_only,
         )
 
 
@@ -420,8 +409,11 @@ def process_files(file_paths, script_args, batch_context=False):
             f"Replace nameID 16 (Typographic Family) using {', '.join(source_parts)}"
         )
 
-    if script_args.only_add_missing:
-        operations.append("Only create nameID 16 if missing (--only-add-missing)")
+    if getattr(script_args, "empty_fields_only", False):
+        operations.append(
+            "Conservative mode (--empty-fields-only): create nameID 16 if missing, "
+            "fill if blank; do not overwrite non-blank Windows English text"
+        )
 
     def process_file_wrapper(filepath, args, dry_run, stats=None):
         """Wrapper function for run_workflow"""
@@ -459,10 +451,10 @@ def process_files(file_paths, script_args, batch_context=False):
             use_family,
             is_variable=False,
             variable_family_override=None,
-            create_only=args.only_add_missing,
             string_override=args.string,
             dry_run=dry_run,
             compound_warning_data=compound_warning_data,
+            empty_fields_only=getattr(args, "empty_fields_only", False),
         )
 
     result = run_workflow(
@@ -489,8 +481,10 @@ def process_files(file_paths, script_args, batch_context=False):
 SCRIPT_FLAG_MAP = {
     "family": "-f",
     "f": "-f",
-    "only_add_missing": "--only-add-missing",
-    "only-add-missing": "--only-add-missing",
+    "only_add_missing": "--empty-fields-only",
+    "only-add-missing": "--empty-fields-only",
+    "empty_fields_only": "--empty-fields-only",
+    "empty-fields-only": "--empty-fields-only",
     "string": "-str",
     "str": "-str",
 }
@@ -543,7 +537,15 @@ def _preprocess_explicit_syntax(argv, id_num):
     return processed
 
 
+def _rewrite_deprecated_argv(argv):
+    """Treat legacy --only-add-missing like --empty-fields-only."""
+    return [
+        "--empty-fields-only" if a == "--only-add-missing" else a for a in argv
+    ]
+
+
 def main():
+    sys.argv = _rewrite_deprecated_argv(sys.argv)
     # Preprocess explicit syntax if present
     sys.argv = _preprocess_explicit_syntax(sys.argv, 16)
 
@@ -579,9 +581,13 @@ def main():
         help="Show what would be done without making changes",
     )
     parser.add_argument(
-        "--only-add-missing",
+        "--empty-fields-only",
         action="store_true",
-        help="Only add nameID 16 if missing; do not modify existing values",
+        dest="empty_fields_only",
+        help=(
+            "Create nameID 16 if missing and fill blank entries only; "
+            "do not overwrite non-blank Windows English text"
+        ),
     )
 
     parser.add_argument(
@@ -634,7 +640,12 @@ class NameID16Replacer:
 
     name_id = 16
     description = "Typographic Family"
-    supported_flags = {"family", "only_add_missing", "filename_parser", "string"}
+    supported_flags = {
+        "family",
+        "filename_parser",
+        "string",
+        "empty_fields_only",
+    }
     process_files = staticmethod(process_files)
 
 
