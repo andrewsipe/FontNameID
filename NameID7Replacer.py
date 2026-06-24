@@ -3,8 +3,15 @@
 Font NameID 7 Replacer Script
 
 Replaces the nameID="7" (Trademark) record in font files.
-Uses template format: "{family} is a trademark of {designer}".
-Supports TTF, OTF, WOFF, WOFF2, and TTX file formats.
+
+Default notice (unless -str/--string):
+  {family} is a trademark of {holder}.
+
+{family} when --family is omitted: nameID 16 → nameID 1 → filename stem (per file).
+{holder} when -d/--designer is omitted: nameID 8 & 9 as '{manufacturer} & {designer}'
+  when both differ; either alone otherwise.
+
+Run with -h for full resolution order. Supports TTF, OTF, WOFF, WOFF2, and TTX.
 Can process single files, multiple files, or entire directories.
 """
 
@@ -39,6 +46,18 @@ from FontCore.core_nameid_replacer_base import (
     is_blank_name_value,
 )
 from FontCore.core_file_collector import SUPPORTED_EXTENSIONS
+from FontCore.core_name_attribution import (
+    HELP_HOLDER_ARG,
+    HELP_TRADEMARK_FAMILY_ARG,
+    TRADEMARK_ARGPARSE_EPILOG,
+    construct_trademark,
+    describe_holder_source,
+    describe_trademark_family_source,
+    resolve_family_name_binary,
+    resolve_family_name_ttx,
+    resolve_rights_holder_binary,
+    resolve_rights_holder_ttx,
+)
 from FontCore.core_ttx_table_io import (
     deduplicate_namerecords_ttx,
     deduplicate_namerecords_binary,
@@ -55,11 +74,6 @@ try:
 except ImportError:
     LXML_AVAILABLE = False
     LET = None  # Prevents unused import warning
-
-
-def construct_trademark(family, designer):
-    """Construct the trademark string"""
-    return f"{family} is a trademark of {designer}"
 
 
 def _insert_namerecord_in_order(name_table, new_record) -> None:
@@ -106,8 +120,17 @@ def process_ttx_file(
         if string_override:
             new_name = string_override
         else:
-            # Construct trademark string
-            new_name = construct_trademark(family, designer)
+            family_resolved = resolve_family_name_ttx(root, family, filepath)
+            holder = resolve_rights_holder_ttx(root, designer)
+            new_name = construct_trademark(family_resolved, holder)
+            if not new_name:
+                show_warning(
+                    filepath,
+                    "Could not resolve family name for trademark (need nameID 16/1, --family, or filename)",
+                    dry_run,
+                    console,
+                )
+                return False
 
         # Find the name table
         name_table = root.find(".//name")
@@ -187,8 +210,18 @@ def process_binary_font(
         if string_override:
             new_name = string_override
         else:
-            # Construct trademark string
-            new_name = construct_trademark(family, designer)
+            family_resolved = resolve_family_name_binary(font, family, filepath)
+            holder = resolve_rights_holder_binary(font, designer)
+            new_name = construct_trademark(family_resolved, holder)
+            if not new_name:
+                show_warning(
+                    filepath,
+                    "Could not resolve family name for trademark (need nameID 16/1, --family, or filename)",
+                    dry_run,
+                    console,
+                )
+                font.close()
+                return False
 
         if "name" not in font:
             show_warning(filepath, "No name table found", dry_run, console)
@@ -315,20 +348,14 @@ def process_files(file_paths, script_args, batch_context=False):
             f"Replace nameID 7 (Trademark) with exact string: '{script_args.string}'"
         )
     else:
-        if script_args.family and script_args.designer:
-            operations.append(
-                f"Replace nameID 7 (Trademark) with: '{script_args.family} is a trademark of {script_args.designer}'"
-            )
-        elif script_args.family:
-            operations.append(
-                f"Replace nameID 7 (Trademark) with: '{script_args.family} is a trademark of [designer]'"
-            )
-        elif script_args.designer:
-            operations.append(
-                f"Replace nameID 7 (Trademark) with: '[family] is a trademark of {script_args.designer}'"
-            )
-        else:
-            operations.append("Replace nameID 7 (Trademark) with: user input")
+        source_parts = [
+            describe_trademark_family_source(script_args.family),
+            describe_holder_source(script_args.designer),
+        ]
+        operations.append(
+            "Replace nameID 7 (Trademark) per file "
+            f"({'; '.join(source_parts)})"
+        )
 
     if getattr(script_args, "empty_fields_only", False):
         operations.append("Only fill blank nameID 7 entries (--empty-fields-only)")
@@ -364,7 +391,14 @@ def process_files(file_paths, script_args, batch_context=False):
 
 
 # Flag mapping for explicit syntax (--id7:flagname=value)
-SCRIPT_FLAG_MAP = {"designer": "-d", "d": "-d", "string": "-str", "str": "-str"}
+SCRIPT_FLAG_MAP = {
+    "family": "--family",
+    "f": "--family",
+    "designer": "-d",
+    "d": "-d",
+    "string": "-str",
+    "str": "-str",
+}
 
 
 def _preprocess_explicit_syntax(argv, id_num):
@@ -419,8 +453,12 @@ def main():
     sys.argv = _preprocess_explicit_syntax(sys.argv, 7)
 
     parser = argparse.ArgumentParser(
-        description="Replace nameID='7' (Trademark) records in font files",
-        epilog="Supported formats: TTF, OTF, WOFF, WOFF2, TTX",
+        description=(
+            "Replace nameID='7' (Trademark) records. Builds a standard notice from "
+            "per-font metadata unless -str/--string overrides."
+        ),
+        epilog=TRADEMARK_ARGPARSE_EPILOG,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
 
     parser.add_argument("paths", nargs="+", help="Font files or directories to process")
@@ -434,14 +472,14 @@ def main():
     parser.add_argument(
         "--family",
         default=None,
-        help="Family name for trademark",
+        help=HELP_TRADEMARK_FAMILY_ARG,
     )
 
     parser.add_argument(
         "-d",
         "--designer",
-        default="designer",
-        help="Designer name for trademark (default: 'designer')",
+        default=None,
+        help=HELP_HOLDER_ARG,
     )
 
     parser.add_argument(
@@ -509,8 +547,8 @@ class NameID7Replacer:
     """Metadata and interface for BatchRunner framework integration."""
 
     name_id = 7
-    description = "Trademark"
-    supported_flags = {"designer", "string", "empty_fields_only"}
+    description = "Trademark (builds from nameID 16/1 + nameID 8/9)"
+    supported_flags = {"family", "designer", "string", "empty_fields_only"}
     process_files = staticmethod(process_files)
 
 

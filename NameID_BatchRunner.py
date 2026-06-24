@@ -7,12 +7,17 @@ Examples:
   python3 NameIDBatchRunner.py --ids 1,4,16,17 -fp -- \
     "/path/A.otf" "/path/B.otf"
 
+- Build copyright + trademark from existing nameIDs (ID 8/9 holder, ID 16 family):
+  python3 NameIDBatchRunner.py --ids 0,7 --yes -- /path/to/fonts -R
+
 - Run ID1 + ID4 only, conservative Book/Normal handling, non-interactive:
   python3 NameIDBatchRunner.py --ids 1,4 --regular-synonyms conservative --yes -- \
     "/path/A.ttf"
 
 Notes:
 - Flags are forwarded only to scripts that support them
+- ID 0/7: -d/--designer overrides rights holder; omit it to combine nameID 8 & 9
+- ID 7: --family overrides trademark family; omit it to use nameID 16/1 per file
 - Each script performs its own file collection and printing
 """
 
@@ -35,6 +40,11 @@ if str(_project_root) not in sys.path:
     sys.path.insert(0, str(_project_root))
 
 import FontCore.core_console_styles as cs
+from FontCore.core_name_attribution import (
+    HELP_COPYRIGHT_CURRENT_YEAR_ARG,
+    HELP_COPYRIGHT_YEAR_ARG,
+    HELP_HOLDER_ARG,
+)
 
 # Get the themed console singleton
 console = cs.get_console()
@@ -142,7 +152,7 @@ PRESETS = {
         "deletions": ["--ids", "13", "--ids", "14"],
     },
     "Core": {"ids": "1,4,6", "flags": [], "deletions": []},
-    "Variable": {"ids": "1,16,17", "flags": [], "deletions": []},
+    "Variable": {"ids": "1,4,16,17", "flags": ["-fp"], "deletions": []},
 }
 
 
@@ -1093,7 +1103,13 @@ def main():
         )
 
         # Pass-through superset (include ID0/ID3 options as well)
-        parser.add_argument("--family", help="Family name (used by nameID 1, 4, 16)")
+        parser.add_argument(
+            "--family",
+            help=(
+                "Family name for nameID 1, 4, and 16. For nameID 7 (trademark), "
+                "overrides per-file auto-resolution (nameID 16 → 1 → filename stem)."
+            ),
+        )
         parser.add_argument(
             "-m",
             "--modifier",
@@ -1133,17 +1149,21 @@ def main():
             help="Override content with exact string (supersedes all other options). Applies to all nameIDs being processed.",
         )
 
-        # NameID0 (Copyright) specific arguments
+        # NameID0 (Copyright) and NameID7 (Trademark) share -d/--designer
         parser.add_argument(
+            "-d",
             "--designer",
-            help="Designer name",
+            help=(
+                "Rights holder for nameID 0 (copyright) and nameID 7 (trademark). "
+                f"{HELP_HOLDER_ARG}"
+            ),
         )
-        parser.add_argument("--year", help="Copyright year")
+        parser.add_argument("--year", help=HELP_COPYRIGHT_YEAR_ARG)
         parser.add_argument(
             "--current-year",
             dest="current_year",
             action="store_true",
-            help="Use current year",
+            help=HELP_COPYRIGHT_CURRENT_YEAR_ARG,
         )
 
         # NameID2 (Subfamily) specific arguments
@@ -1175,8 +1195,7 @@ def main():
         # NameID6 (PostScript) specific arguments
         # (uses same --postscript as NameID3)
 
-        # NameID7 (Trademark) specific arguments
-        # (uses same --designer as NameID0)
+        # NameID7 (Trademark): also uses --family (see above) and -d/--designer
 
         # NameID8 (Manufacturer) specific arguments
         parser.add_argument(
@@ -1185,8 +1204,7 @@ def main():
             help="Manufacturer name",
         )
 
-        # NameID9 (Designer) specific arguments
-        # (uses same --designer as NameID0)
+        # NameID9 (Designer): -d/--designer sets nameID 9 text when --ids includes 9
 
         # NameID10 (Description) specific arguments
         parser.add_argument(

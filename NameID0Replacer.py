@@ -3,9 +3,17 @@
 Font NameID 0 Replacer Script
 
 Replaces the nameID="0" (Copyright) record in font files.
-Extracts year from head table or allows manual specification.
-Falls back to existing designer info from nameID 8/9.
-Supports TTF, OTF, WOFF, WOFF2, and TTX file formats.
+
+Default notice (unless -str/--string):
+  Copyright © {year} by {holder}. All rights reserved.
+
+{holder} when -d/--designer is omitted: nameID 8 & 9 combined as
+  '{manufacturer} & {designer}' when both differ; either alone otherwise.
+
+{year} when --year/--current-year are omitted: head.created, then existing
+  nameID 0, then the current calendar year.
+
+Run with -h for full resolution order. Supports TTF, OTF, WOFF, WOFF2, and TTX.
 Can process single files, multiple files, or entire directories.
 """
 
@@ -17,7 +25,6 @@ import xml.etree.ElementTree as ET
 from fontTools.ttLib import TTFont
 from fontTools.ttLib.tables._n_a_m_e import NameRecord
 from datetime import datetime
-import re
 
 # Add project root to path for FontCore imports (works for root and subdirectory scripts)
 # ruff: noqa: E402
@@ -43,9 +50,27 @@ from FontCore.core_nameid_replacer_base import (
     show_error,
     is_blank_name_value,
 )
+from FontCore.core_name_attribution import (
+    COPYRIGHT_ARGPARSE_EPILOG,
+    HELP_COPYRIGHT_CURRENT_YEAR_ARG,
+    HELP_COPYRIGHT_YEAR_ARG,
+    HELP_HOLDER_ARG,
+    PLACEHOLDER_RIGHTS_HOLDER,
+    construct_copyright,
+    describe_copyright_year_source,
+    describe_holder_source,
+    extract_head_created_year_binary,
+    extract_head_created_year_ttx,
+    extract_year_from_copyright,
+    is_explicit_rights_holder_override,
+    resolve_copyright_year,
+    resolve_rights_holder_binary,
+    resolve_rights_holder_ttx,
+)
 from FontCore.core_ttx_table_io import (
     deduplicate_namerecords_ttx,
     deduplicate_namerecords_binary,
+    find_namerecord_ttx,
 )
 
 # Optional better XML parser that preserves comments/whitespace
@@ -65,106 +90,95 @@ def get_filename_part(filepath):
     return Path(filepath).stem
 
 
-def extract_year_from_created_field(created_value):
-    """Extract year from created field like 'Wed May 28 08:00:00 2025'"""
-    if not created_value:
-        return None
-
-    # Look for 4-digit year at the end
-    match = re.search(r"\b(\d{4})\b", created_value)
-    if match:
-        return int(match.group(1))
-    return None
-
-
-def get_existing_name_record(name_table, name_id):
-    """Get existing name record value by nameID"""
-    if hasattr(name_table, "names"):
-        # Binary font
-        for record in name_table.names:
-            if (
-                record.nameID == name_id
-                and record.platformID == 3
-                and record.platEncID == 1
-                and record.langID == 0x409
-            ):
-                try:
-                    return (
-                        record.toUnicode()
-                        if hasattr(record, "toUnicode")
-                        else str(record.string)
-                    )
-                except (UnicodeDecodeError, AttributeError):
-                    return str(record.string)
-    return None
-
-
-def get_font_info_ttx(root):
-    """Extract font info from TTX (XML) file"""
-    info = {"created_year": None, "designer": None}
-
-    # Extract year from head table created field
-    head_table = root.find(".//head")
-    if head_table is not None:
-        created_elem = head_table.find(".//created")
-        if created_elem is not None and created_elem.get("value"):
-            info["created_year"] = extract_year_from_created_field(
-                created_elem.get("value")
-            )
-
-    # Extract designer from nameID 8 or 9
+def _existing_copyright_year_ttx(root) -> int | None:
     name_table = root.find(".//name")
-    if name_table is not None:
-        # Try nameID 8 (Manufacturer) first
-        manufacturer = name_table.find(
-            './/namerecord[@nameID="8"][@platformID="3"][@platEncID="1"][@langID="0x409"]'
-        )
-        if manufacturer is not None and manufacturer.text:
-            info["designer"] = manufacturer.text.strip()
-        else:
-            # Try nameID 9 (Designer)
-            designer = name_table.find(
-                './/namerecord[@nameID="9"][@platformID="3"][@platEncID="1"][@langID="0x409"]'
-            )
-            if designer is not None and designer.text:
-                info["designer"] = designer.text.strip()
-
-    return info
+    if name_table is None:
+        return None
+    nr = find_namerecord_ttx(name_table, 0)
+    if nr is None or not nr.text:
+        return None
+    return extract_year_from_copyright(nr.text)
 
 
-def get_font_info_binary(font):
-    """Extract font info from binary font"""
-    info = {"created_year": None, "designer": None}
+def _existing_copyright_year_binary(font) -> int | None:
+    if "name" not in font:
+        return None
+    for record in font["name"].names:
+        if (
+            record.nameID == 0
+            and record.platformID == 3
+            and record.platEncID == 1
+            and record.langID == 0x409
+        ):
+            try:
+                text = (
+                    record.toUnicode()
+                    if hasattr(record, "toUnicode")
+                    else str(record.string)
+                )
+            except Exception:
+                text = str(record.string)
+            return extract_year_from_copyright(text)
+    return None
 
-    # Extract year from head table created field
-    if "head" in font and hasattr(font["head"], "created"):
-        try:
-            # The created field is a timestamp, convert to year
-            # FontTools stores this as seconds since 1904-01-01
-            import time
 
-            timestamp = font["head"].created
-            # Convert from 1904 epoch to Unix epoch (difference is 2082844800 seconds)
-            unix_timestamp = timestamp - 2082844800
-            created_year = time.gmtime(unix_timestamp).tm_year
-            info["created_year"] = created_year
-        except (AttributeError, ValueError, OSError):
-            pass
+def _build_copyright_notice(
+    *,
+    holder_override,
+    manual_year,
+    use_current_year,
+    head_year,
+    existing_copyright_year,
+) -> str:
+    holder = (
+        str(holder_override).strip()
+        if is_explicit_rights_holder_override(holder_override)
+        else PLACEHOLDER_RIGHTS_HOLDER
+    )
+    year = resolve_copyright_year(
+        use_current_year=use_current_year,
+        manual_year=manual_year,
+        head_year=head_year,
+        existing_copyright_year=existing_copyright_year,
+        default_year=datetime.now().year,
+    )
+    return construct_copyright(year, holder)
 
-    # Extract designer from nameID 8 or 9
-    if "name" in font:
-        name_table = font["name"]
-        # Try nameID 8 (Manufacturer) first
-        manufacturer = get_existing_name_record(name_table, 8)
-        if manufacturer:
-            info["designer"] = manufacturer.strip()
-        else:
-            # Try nameID 9 (Designer)
-            designer = get_existing_name_record(name_table, 9)
-            if designer:
-                info["designer"] = designer.strip()
 
-    return info
+def _build_copyright_from_ttx(
+    root,
+    *,
+    holder_override,
+    manual_year,
+    use_current_year,
+) -> str:
+    holder = resolve_rights_holder_ttx(root, holder_override)
+    year = resolve_copyright_year(
+        use_current_year=use_current_year,
+        manual_year=manual_year,
+        head_year=extract_head_created_year_ttx(root),
+        existing_copyright_year=_existing_copyright_year_ttx(root),
+        default_year=datetime.now().year,
+    )
+    return construct_copyright(year, holder)
+
+
+def _build_copyright_from_binary(
+    font,
+    *,
+    holder_override,
+    manual_year,
+    use_current_year,
+) -> str:
+    holder = resolve_rights_holder_binary(font, holder_override)
+    year = resolve_copyright_year(
+        use_current_year=use_current_year,
+        manual_year=manual_year,
+        head_year=extract_head_created_year_binary(font),
+        existing_copyright_year=_existing_copyright_year_binary(font),
+        default_year=datetime.now().year,
+    )
+    return construct_copyright(year, holder)
 
 
 def _insert_namerecord_in_order(name_table, new_record) -> None:
@@ -221,32 +235,11 @@ def process_ttx_file(
         if string_override:
             new_name = string_override
         else:
-            # Get font info
-            font_info = get_font_info_ttx(root)
-
-            # Determine year to use
-            if use_current_year:
-                year_to_use = datetime.now().year
-            elif manual_year:
-                year_to_use = manual_year
-            elif created_year:
-                year_to_use = created_year
-            elif font_info["created_year"]:
-                year_to_use = font_info["created_year"]
-            else:
-                year_to_use = datetime.now().year
-
-            # Determine designer to use
-            if designer and designer != "designer":
-                designer_to_use = designer
-            elif font_info["designer"]:
-                designer_to_use = font_info["designer"]
-            else:
-                designer_to_use = "designer"
-
-            # Construct copyright string
-            new_name = (
-                f"Copyright © {year_to_use} by {designer_to_use}. All rights reserved."
+            new_name = _build_copyright_from_ttx(
+                root,
+                holder_override=designer,
+                manual_year=manual_year or created_year,
+                use_current_year=use_current_year,
             )
 
         # Find the name table
@@ -329,32 +322,11 @@ def process_binary_font(
         if string_override:
             new_name = string_override
         else:
-            # Get font info
-            font_info = get_font_info_binary(font)
-
-            # Determine year to use
-            if use_current_year:
-                year_to_use = datetime.now().year
-            elif manual_year:
-                year_to_use = manual_year
-            elif created_year:
-                year_to_use = created_year
-            elif font_info["created_year"]:
-                year_to_use = font_info["created_year"]
-            else:
-                year_to_use = datetime.now().year
-
-            # Determine designer to use
-            if designer and designer != "designer":
-                designer_to_use = designer
-            elif font_info["designer"]:
-                designer_to_use = font_info["designer"]
-            else:
-                designer_to_use = "designer"
-
-            # Construct copyright string
-            new_name = (
-                f"Copyright © {year_to_use} by {designer_to_use}. All rights reserved."
+            new_name = _build_copyright_from_binary(
+                font,
+                holder_override=designer,
+                manual_year=manual_year or created_year,
+                use_current_year=use_current_year,
             )
 
         if "name" not in font:
@@ -481,49 +453,38 @@ def get_preview_name(
             return string_override
 
         ext = Path(filepath).suffix.lower()
-        font_info = {"created_year": None, "designer": None}
 
         if ext == ".ttx":
             tree = ET.parse(filepath)
             root = tree.getroot()
-            font_info = get_font_info_ttx(root)
-        else:
-            font = TTFont(filepath)
-            font_info = get_font_info_binary(font)
+            return _build_copyright_from_ttx(
+                root,
+                holder_override=designer,
+                manual_year=manual_year or created_year,
+                use_current_year=use_current_year,
+            )
+
+        font = TTFont(filepath)
+        try:
+            return _build_copyright_from_binary(
+                font,
+                holder_override=designer,
+                manual_year=manual_year or created_year,
+                use_current_year=use_current_year,
+            )
+        finally:
             font.close()
-
-        # Determine year to use
-        if use_current_year:
-            year_to_use = datetime.now().year
-        elif manual_year:
-            year_to_use = manual_year
-        elif created_year:
-            year_to_use = created_year
-        elif font_info["created_year"]:
-            year_to_use = font_info["created_year"]
-        else:
-            year_to_use = datetime.now().year
-
-        # Determine designer to use
-        if designer and designer != "designer":
-            designer_to_use = designer
-        elif font_info["designer"]:
-            designer_to_use = font_info["designer"]
-        else:
-            designer_to_use = "designer"
-
-        return f"Copyright © {year_to_use} by {designer_to_use}. All rights reserved."
 
     except Exception:
         if string_override:
             return string_override
-        year_to_use = (
-            datetime.now().year
-            if use_current_year
-            else (manual_year or created_year or datetime.now().year)
+        return _build_copyright_notice(
+            holder_override=designer,
+            manual_year=manual_year or created_year,
+            use_current_year=use_current_year,
+            head_year=None,
+            existing_copyright_year=None,
         )
-        designer_to_use = designer if designer != "designer" else "designer"
-        return f"Copyright © {year_to_use} by {designer_to_use}. All rights reserved."
 
 
 def process_file_wrapper(filepath, args, dry_run=False, stats=None):
@@ -574,17 +535,15 @@ def process_files(file_paths, script_args, batch_context=False):
             cs.fmt_replacement_operation(0, "Copyright", "string override")
         )
     else:
-        source_parts = []
-        if script_args.designer:
-            source_parts.append("designer")
-        if script_args.year:
-            source_parts.append("year")
-        if script_args.current_year:
-            source_parts.append("current year")
-        if not source_parts:
-            source_parts.append("default values")
+        source_parts = [
+            describe_holder_source(script_args.designer),
+            describe_copyright_year_source(
+                manual_year=script_args.year,
+                use_current_year=script_args.current_year,
+            ),
+        ]
         operations.append(
-            cs.fmt_replacement_operation(0, "Copyright", ", ".join(source_parts))
+            cs.fmt_replacement_operation(0, "Copyright", "; ".join(source_parts))
         )
 
     if getattr(script_args, "empty_fields_only", False):
@@ -674,8 +633,12 @@ def main():
     sys.argv = _preprocess_explicit_syntax(sys.argv, 0)
 
     parser = argparse.ArgumentParser(
-        description="Replace nameID='0' (Copyright) records in font files",
-        epilog="Supported formats: TTF, OTF, WOFF, WOFF2, TTX",
+        description=(
+            "Replace nameID='0' (Copyright) records. Builds a standard notice from "
+            "per-font metadata unless -str/--string overrides."
+        ),
+        epilog=COPYRIGHT_ARGPARSE_EPILOG,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
 
     parser.add_argument("paths", nargs="+", help="Font files or directories to process")
@@ -689,17 +652,17 @@ def main():
     parser.add_argument(
         "-d",
         "--designer",
-        default="designer",
-        help="Designer name for copyright notice (default: extracted from nameID 8/9 or 'designer')",
+        default=None,
+        help=HELP_HOLDER_ARG,
     )
 
-    parser.add_argument("--year", type=int, help="Specific year to use in copyright")
+    parser.add_argument("--year", type=int, help=HELP_COPYRIGHT_YEAR_ARG)
 
     parser.add_argument(
         "--current-year",
         dest="current_year",
         action="store_true",
-        help="Use current year for copyright",
+        help=HELP_COPYRIGHT_CURRENT_YEAR_ARG,
     )
 
     parser.add_argument(
@@ -767,7 +730,7 @@ class NameID0Replacer:
     """Metadata and interface for BatchRunner framework integration."""
 
     name_id = 0
-    description = "Copyright"
+    description = "Copyright (builds from nameID 8/9 + year sources)"
     supported_flags = {
         "designer",
         "year",

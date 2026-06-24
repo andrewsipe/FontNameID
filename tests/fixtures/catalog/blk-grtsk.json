@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "source": {
+    "site": "typographer.com",
+    "url": "https://typographer.com/fonts/blk-grtsk/",
+    "scraped_at": "2026-06-15T12:00:00Z",
+    "content_hash": "sha256:test"
+  },
+  "family": {
+    "name": "Grtsk",
+    "slug": "blk-grtsk",
+    "typographer_id": "blk:grtsk",
+    "foundry_code": "blk",
+    "foundry_name": "Black[Foundry]"
+  },
+  "name_table": {
+    "8": { "manufacturer": "Black[Foundry]" },
+    "10": { "description": "Grtsk is a grotesk family." }
+  },
+  "derive": {
+    "0": { "from": ["8", "9"], "strategy": "copyright_default" },
+    "7": { "from": ["16", "8", "9"], "strategy": "trademark_default" }
+  },
+  "extra": {
+    "tags": [],
+    "languages": [],
+    "styles": []
+  }
+}

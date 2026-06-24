@@ -45,6 +45,8 @@ from FontCore.core_ttx_table_io import (
     create_or_update_namerecord_ttx,
     deduplicate_namerecords_ttx,
     deduplicate_namerecords_binary,
+    preserve_low_nameids_in_fvar_stat_ttx,
+    preserve_low_nameids_in_fvar_stat_binary,
 )
 from FontCore.core_file_collector import SUPPORTED_EXTENSIONS, collect_font_files
 from FontCore.core_nameid_replacer_base import (
@@ -61,6 +63,7 @@ from FontCore.core_nameid_replacer_base import (
     is_variable_font_ttx,
     is_variable_font_binary,
     clean_variable_family_name,
+    resolve_variable_slots_for_replacer,
     ErrorContext,
     show_compound_modifier_warning,
     is_blank_name_value,
@@ -168,6 +171,7 @@ def process_ttx_file(
     slope,
     is_variable=False,
     variable_family_override=None,
+    variable_slots=None,
     string_override=None,
     dry_run=False,
     compound_warning_data=None,
@@ -185,9 +189,13 @@ def process_ttx_file(
         if is_vf:
             family = clean_variable_family_name(family)
 
-        # Construct family name: string_override → variable (with override) → variable (no override) → override only → static
+        # Construct family name: string_override → variable slots → variable (legacy) → static
         if string_override:
             new_name = string_override
+        elif is_vf and variable_slots is not None:
+            new_name = build_id1(
+                family, None, None, None, is_variable=True, variable_slots=variable_slots
+            )
         elif is_vf and variable_family_override is not None:
             new_name = build_id1(
                 family, None, None, None, is_variable=True, variable_family_override=variable_family_override
@@ -204,6 +212,20 @@ def process_ttx_file(
         if name_table is None:
             show_warning(filepath, "No name table found", dry_run, console)
             return False
+
+        if is_vf:
+            try:
+                count_pres = preserve_low_nameids_in_fvar_stat_ttx(
+                    root, name_table, threshold=17
+                )
+                if count_pres:
+                    show_info(
+                        f"Preserved and remapped {count_pres} reference(s)",
+                        dry_run,
+                        console,
+                    )
+            except Exception:
+                pass
 
         # NFC normalize to precompose any combining marks
         new_name = normalize_nfc(new_name) or new_name
@@ -279,6 +301,7 @@ def process_binary_font(
     slope,
     is_variable=False,
     variable_family_override=None,
+    variable_slots=None,
     string_override=None,
     dry_run=False,
     compound_warning_data=None,
@@ -296,9 +319,13 @@ def process_binary_font(
         if is_vf:
             family = clean_variable_family_name(family)
 
-        # Construct family name: string_override → variable (with override) → variable (no override) → override only → static
+        # Construct family name: string_override → variable slots → variable (legacy) → static
         if string_override:
             new_name = string_override
+        elif is_vf and variable_slots is not None:
+            new_name = build_id1(
+                family, None, None, None, is_variable=True, variable_slots=variable_slots
+            )
         elif is_vf and variable_family_override is not None:
             new_name = build_id1(
                 family, None, None, None, is_variable=True, variable_family_override=variable_family_override
@@ -316,6 +343,18 @@ def process_binary_font(
             return False
 
         name_table = font["name"]
+
+        if is_vf:
+            try:
+                count_pres = preserve_low_nameids_in_fvar_stat_binary(font, threshold=17)
+                if count_pres:
+                    show_info(
+                        f"Preserved and remapped {count_pres} reference(s)",
+                        dry_run,
+                        console,
+                    )
+            except Exception:
+                pass
 
         # Look for existing nameID=1 record with the specific platform/encoding
         found = False
@@ -412,6 +451,7 @@ def process_file(
     slope,
     is_variable=False,
     variable_family_override=None,
+    variable_slots=None,
     string_override=None,
     dry_run=False,
     compound_warning_data=None,
@@ -436,6 +476,7 @@ def process_file(
             slope,
             is_variable,
             variable_family_override,
+            variable_slots,
             string_override,
             dry_run,
             compound_warning_data,
@@ -450,6 +491,7 @@ def process_file(
             slope,
             is_variable,
             variable_family_override,
+            variable_slots,
             string_override,
             dry_run,
             compound_warning_data,
@@ -569,9 +611,9 @@ def process_files(file_paths, script_args, batch_context=False):
                     "compound_modifier",
                 )
 
-        # When filename parser is on, pass full "Family Subfamily" for variable ID1 (strip-only-Variable policy)
+        variable_slots = resolve_variable_slots_for_replacer(filepath)
         variable_family_override = None
-        if args.filename_parser is not None and use_family and use_style:
+        if variable_slots is None and args.filename_parser is not None and use_family and use_style:
             variable_family_override = f"{use_family} {use_style}".strip()
 
         return process_file(
@@ -582,6 +624,7 @@ def process_files(file_paths, script_args, batch_context=False):
             use_slope,
             is_variable=False,
             variable_family_override=variable_family_override,
+            variable_slots=variable_slots,
             string_override=args.string,
             dry_run=dry_run,
             compound_warning_data=compound_warning_data,

@@ -44,6 +44,7 @@ from FontCore.core_ttx_table_io import (
     deduplicate_namerecords_ttx,
     deduplicate_namerecords_binary,
     preserve_low_nameids_in_fvar_stat_ttx,
+    preserve_low_nameids_in_fvar_stat_binary,
     get_stat_elided_fallback_name_ttx,
     get_stat_elided_fallback_name_binary,
     compute_stat_default_style_name_binary,
@@ -61,6 +62,7 @@ from FontCore.core_nameid_replacer_base import (
     show_error,
     is_variable_font_ttx,
     is_variable_font_binary,
+    resolve_variable_slots_for_replacer,
     show_compound_modifier_warning,
     is_blank_name_value,
 )
@@ -141,6 +143,7 @@ def process_ttx_file(
     modifier,
     style,
     slope,
+    variable_slots=None,
     fp_enabled: bool = False,
     dry_run: bool = False,
     compound_warning_data=None,
@@ -218,36 +221,37 @@ def process_ttx_file(
                     slope_eff = "Italic"
         else:
             slope_eff = None
-        # If truly variable (fvar+STAT), compute default name via STAT/fvar defaults, falling back to ElidedFallback
         if is_variable_font_ttx(root):
-            # For variable fonts, use STAT computation or simple default
-            from FontCore.core_ttx_table_io import compute_stat_default_style_name_ttx
-
-            computed = compute_stat_default_style_name_ttx(root, name_table)
-            if not computed:
-                fallback = get_stat_elided_fallback_name_ttx(root, name_table)
-            else:
-                fallback = computed
-            if fallback:
-                # Use STAT result; when fp enabled and we have a prefix from filename, prepend it
-                prefix_from_filename = None
-                if fp_enabled and style_eff:
-                    prefix_from_filename = split_variable_subfamily(style_eff)[0] or None
-                if prefix_from_filename:
-                    from FontCore.core_string_utils import join_nonempty
-                    new_name = join_nonempty(prefix_from_filename, fallback)
-                else:
-                    new_name = fallback
-            else:
-                # Simple default: reappend prefix/slope from filename via policy
-                prefix_from_filename = None
-                if fp_enabled and style_eff:
-                    prefix_from_filename = split_variable_subfamily(style_eff)[0] or None
+            if variable_slots is not None:
                 new_name = build_id17_variable_default(
-                    is_italic,
-                    slope_from_filename=slope_eff,
-                    prefix_from_filename=prefix_from_filename,
+                    is_italic, variable_slots=variable_slots
                 )
+            else:
+                from FontCore.core_ttx_table_io import compute_stat_default_style_name_ttx
+
+                computed = compute_stat_default_style_name_ttx(root, name_table)
+                if not computed:
+                    fallback = get_stat_elided_fallback_name_ttx(root, name_table)
+                else:
+                    fallback = computed
+                if fallback:
+                    prefix_from_filename = None
+                    if fp_enabled and style_eff:
+                        prefix_from_filename = split_variable_subfamily(style_eff)[0] or None
+                    if prefix_from_filename:
+                        from FontCore.core_string_utils import join_nonempty
+                        new_name = join_nonempty(prefix_from_filename, fallback)
+                    else:
+                        new_name = fallback
+                else:
+                    prefix_from_filename = None
+                    if fp_enabled and style_eff:
+                        prefix_from_filename = split_variable_subfamily(style_eff)[0] or None
+                    new_name = build_id17_variable_default(
+                        is_italic,
+                        slope_from_filename=slope_eff,
+                        prefix_from_filename=prefix_from_filename,
+                    )
         else:
             new_name = build_id17(modifier, style_eff, slope_eff)
 
@@ -308,6 +312,7 @@ def process_binary_font(
     modifier,
     style,
     slope,
+    variable_slots=None,
     fp_enabled: bool = False,
     dry_run: bool = False,
     compound_warning_data=None,
@@ -354,37 +359,38 @@ def process_binary_font(
                     slope_eff = "Italic"
         else:
             slope_eff = None
-        # If truly variable (fvar+STAT), compute default name via STAT/fvar defaults (binary)
         if is_variable_font_binary(font):
-            # For variable fonts, use STAT computation or simple default
-            try:
-                computed = compute_stat_default_style_name_binary(font)
-            except Exception:
-                computed = None
-            if not computed:
-                fallback_bin = get_stat_elided_fallback_name_binary(font)
-            else:
-                fallback_bin = computed
-            if fallback_bin:
-                # Use STAT result; when fp enabled and we have a prefix from filename, prepend it
-                prefix_from_filename = None
-                if fp_enabled and style_eff:
-                    prefix_from_filename = split_variable_subfamily(style_eff)[0] or None
-                if prefix_from_filename:
-                    from FontCore.core_string_utils import join_nonempty
-                    new_name = join_nonempty(prefix_from_filename, fallback_bin)
-                else:
-                    new_name = fallback_bin
-            else:
-                # Simple default: reappend prefix/slope from filename via policy
-                prefix_from_filename = None
-                if fp_enabled and style_eff:
-                    prefix_from_filename = split_variable_subfamily(style_eff)[0] or None
+            if variable_slots is not None:
                 new_name = build_id17_variable_default(
-                    is_italic,
-                    slope_from_filename=slope_eff,
-                    prefix_from_filename=prefix_from_filename,
+                    is_italic, variable_slots=variable_slots
                 )
+            else:
+                try:
+                    computed = compute_stat_default_style_name_binary(font)
+                except Exception:
+                    computed = None
+                if not computed:
+                    fallback_bin = get_stat_elided_fallback_name_binary(font)
+                else:
+                    fallback_bin = computed
+                if fallback_bin:
+                    prefix_from_filename = None
+                    if fp_enabled and style_eff:
+                        prefix_from_filename = split_variable_subfamily(style_eff)[0] or None
+                    if prefix_from_filename:
+                        from FontCore.core_string_utils import join_nonempty
+                        new_name = join_nonempty(prefix_from_filename, fallback_bin)
+                    else:
+                        new_name = fallback_bin
+                else:
+                    prefix_from_filename = None
+                    if fp_enabled and style_eff:
+                        prefix_from_filename = split_variable_subfamily(style_eff)[0] or None
+                    new_name = build_id17_variable_default(
+                        is_italic,
+                        slope_from_filename=slope_eff,
+                        prefix_from_filename=prefix_from_filename,
+                    )
         else:
             new_name = build_id17(modifier, style_eff, slope_eff)
 
@@ -396,6 +402,18 @@ def process_binary_font(
             return False
 
         name_table = font["name"]
+
+        if is_vf:
+            try:
+                count_pres = preserve_low_nameids_in_fvar_stat_binary(font, threshold=17)
+                if count_pres:
+                    show_info(
+                        f"Preserved and remapped {count_pres} reference(s)",
+                        dry_run,
+                        console,
+                    )
+            except Exception:
+                pass
 
         # Look for existing nameID=17 record with the specific platform/encoding
         found = False
@@ -450,23 +468,6 @@ def process_binary_font(
         # Deduplicate and save the font only if changed
         if changed and not dry_run:
             deduplicate_namerecords_binary(name_table, 17)
-            # Binary preservation for variable fonts (fvar+STAT)
-            try:
-                from FontCore.core_ttx_table_io import (
-                    preserve_low_nameids_in_fvar_stat_binary,
-                )
-
-                count_pres = preserve_low_nameids_in_fvar_stat_binary(
-                    font, threshold=17
-                )
-                if count_pres:
-                    show_info(
-                        f"Preserved and remapped {cs.fmt_count(count_pres)} reference(s)",
-                        dry_run,
-                        console,
-                    )
-            except Exception:
-                pass
             font.save(filepath)
 
         if changed:
@@ -489,6 +490,7 @@ def process_file(
     modifier,
     style,
     slope,
+    variable_slots=None,
     fp_enabled: bool = False,
     string_override: str | None = None,
     dry_run: bool = False,
@@ -516,6 +518,7 @@ def process_file(
             modifier,
             use_style,
             slope,
+            variable_slots=variable_slots,
             fp_enabled=fp_enabled,
             dry_run=dry_run,
             compound_warning_data=compound_warning_data,
@@ -527,6 +530,7 @@ def process_file(
             modifier,
             use_style,
             slope,
+            variable_slots=variable_slots,
             fp_enabled=fp_enabled,
             dry_run=dry_run,
             compound_warning_data=compound_warning_data,
@@ -620,11 +624,14 @@ def process_files(file_paths, script_args, batch_context=False):
                     "compound_modifier",
                 )
 
+        variable_slots = resolve_variable_slots_for_replacer(filepath)
+
         return process_file(
             filepath,
             use_modifier,
             use_style,
             use_slope,
+            variable_slots=variable_slots,
             fp_enabled=args.filename_parser is not None,
             string_override=args.string,
             dry_run=dry_run,

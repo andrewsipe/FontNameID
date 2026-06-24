@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "source": {
+    "site": "typographer.com",
+    "url": "https://typographer.com/fonts/blk-algo/",
+    "scraped_at": "2026-06-15T12:00:00Z",
+    "content_hash": "sha256:test"
+  },
+  "family": {
+    "name": "Algo",
+    "slug": "blk-algo",
+    "typographer_id": "blk:algo",
+    "foundry_code": "blk",
+    "foundry_name": "Black[Foundry]"
+  },
+  "name_table": {
+    "8": { "manufacturer": "Black[Foundry]" },
+    "9": { "designer": "Michel Derre & FONTYOU" },
+    "10": { "description": "Algo FY is a blackletter-inspired family." }
+  },
+  "derive": {
+    "0": { "from": ["8", "9"], "strategy": "copyright_default" },
+    "7": { "from": ["16", "8", "9"], "strategy": "trademark_default" }
+  },
+  "extra": {
+    "tags": [],
+    "languages": [],
+    "styles": []
+  }
+}

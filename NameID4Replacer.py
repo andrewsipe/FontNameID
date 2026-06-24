@@ -47,6 +47,7 @@ from FontCore.core_ttx_table_io import (
     deduplicate_namerecords_ttx,
     deduplicate_namerecords_binary,
     preserve_low_nameids_in_fvar_stat_ttx,
+    preserve_low_nameids_in_fvar_stat_binary,
 )
 
 from FontCore.core_file_collector import SUPPORTED_EXTENSIONS, collect_font_files
@@ -65,6 +66,7 @@ from FontCore.core_nameid_replacer_base import (
     is_variable_font_ttx,
     is_variable_font_binary,
     clean_variable_family_name,
+    resolve_variable_slots_for_replacer,
     show_compound_modifier_warning,
     is_blank_name_value,
 )
@@ -231,6 +233,7 @@ def process_ttx_file(
     slope,
     is_variable: bool = False,
     variable_family_override: str | None = None,
+    variable_slots=None,
     fp_enabled: bool = False,
     dry_run: bool = False,
     compound_warning_data=None,
@@ -279,31 +282,40 @@ def process_ttx_file(
             else:
                 slope_eff = slope
             if is_variable_font_ttx(root):
-                italic_like_in_naming = _has_italic_like(style_eff) or _has_italic_like(
-                    slope
-                )
-                use_var_italic = is_italic and not (
-                    fp_enabled and not italic_like_in_naming
-                )
-                # Preserve prefix/suffix order: prefix before "Variable", suffix after
-                prefix_from_filename = None
-                suffix_from_filename = None
-                slope_from_filename = None
-                if fp_enabled and style:
-                    prefix_from_filename, suffix_from_filename = split_variable_subfamily(style)
-                    if not prefix_from_filename and not suffix_from_filename and slope:
-                        slope_from_filename = slope
-                new_name = build_id4(
-                    family,
-                    None,
-                    None,
-                    None,
-                    is_variable=True,
-                    is_italic_font=use_var_italic,
-                    slope_from_filename=slope_from_filename,
-                    prefix_from_filename=prefix_from_filename or None,
-                    suffix_from_filename=suffix_from_filename or None,
-                )
+                if variable_slots is not None:
+                    new_name = build_id4(
+                        family,
+                        None,
+                        None,
+                        None,
+                        is_variable=True,
+                        variable_slots=variable_slots,
+                    )
+                else:
+                    italic_like_in_naming = _has_italic_like(style_eff) or _has_italic_like(
+                        slope
+                    )
+                    use_var_italic = is_italic and not (
+                        fp_enabled and not italic_like_in_naming
+                    )
+                    prefix_from_filename = None
+                    suffix_from_filename = None
+                    slope_from_filename = None
+                    if fp_enabled and style:
+                        prefix_from_filename, suffix_from_filename = split_variable_subfamily(style)
+                        if not prefix_from_filename and not suffix_from_filename and slope:
+                            slope_from_filename = slope
+                    new_name = build_id4(
+                        family,
+                        None,
+                        None,
+                        None,
+                        is_variable=True,
+                        is_italic_font=use_var_italic,
+                        slope_from_filename=slope_from_filename,
+                        prefix_from_filename=prefix_from_filename or None,
+                        suffix_from_filename=suffix_from_filename or None,
+                    )
             else:
                 new_name = construct_full_name(family, modifier, style_eff, slope_eff)
 
@@ -399,6 +411,7 @@ def process_binary_font(
     slope,
     is_variable: bool = False,
     variable_family_override: str | None = None,
+    variable_slots=None,
     fp_enabled: bool = False,
     dry_run: bool = False,
     compound_warning_data=None,
@@ -445,31 +458,40 @@ def process_binary_font(
             else:
                 slope_eff = slope
             if is_variable_font_binary(font):
-                italic_like_in_naming = _has_italic_like(style_eff) or _has_italic_like(
-                    slope
-                )
-                use_var_italic = is_italic and not (
-                    fp_enabled and not italic_like_in_naming
-                )
-                # Preserve prefix/suffix order: prefix before "Variable", suffix after
-                prefix_from_filename = None
-                suffix_from_filename = None
-                slope_from_filename = None
-                if fp_enabled and style:
-                    prefix_from_filename, suffix_from_filename = split_variable_subfamily(style)
-                    if not prefix_from_filename and not suffix_from_filename and slope:
-                        slope_from_filename = slope
-                new_name = build_id4(
-                    family,
-                    None,
-                    None,
-                    None,
-                    is_variable=True,
-                    is_italic_font=use_var_italic,
-                    slope_from_filename=slope_from_filename,
-                    prefix_from_filename=prefix_from_filename or None,
-                    suffix_from_filename=suffix_from_filename or None,
-                )
+                if variable_slots is not None:
+                    new_name = build_id4(
+                        family,
+                        None,
+                        None,
+                        None,
+                        is_variable=True,
+                        variable_slots=variable_slots,
+                    )
+                else:
+                    italic_like_in_naming = _has_italic_like(style_eff) or _has_italic_like(
+                        slope
+                    )
+                    use_var_italic = is_italic and not (
+                        fp_enabled and not italic_like_in_naming
+                    )
+                    prefix_from_filename = None
+                    suffix_from_filename = None
+                    slope_from_filename = None
+                    if fp_enabled and style:
+                        prefix_from_filename, suffix_from_filename = split_variable_subfamily(style)
+                        if not prefix_from_filename and not suffix_from_filename and slope:
+                            slope_from_filename = slope
+                    new_name = build_id4(
+                        family,
+                        None,
+                        None,
+                        None,
+                        is_variable=True,
+                        is_italic_font=use_var_italic,
+                        slope_from_filename=slope_from_filename,
+                        prefix_from_filename=prefix_from_filename or None,
+                        suffix_from_filename=suffix_from_filename or None,
+                    )
             else:
                 new_name = construct_full_name(family, modifier, style_eff, slope_eff)
 
@@ -478,6 +500,18 @@ def process_binary_font(
             return False
 
         name_table = font["name"]
+
+        if is_vf:
+            try:
+                count_pres = preserve_low_nameids_in_fvar_stat_binary(font, threshold=17)
+                if count_pres:
+                    show_info(
+                        f"Preserved and remapped {count_pres} reference(s)",
+                        dry_run,
+                        console,
+                    )
+            except Exception:
+                pass
 
         # Look for existing nameID=4 record with the specific platform/encoding
         found = False
@@ -574,6 +608,7 @@ def process_file(
     slope,
     is_variable: bool = False,
     variable_family_override: str | None = None,
+    variable_slots=None,
     fp_enabled: bool = False,
     dry_run: bool = False,
     compound_warning_data=None,
@@ -598,6 +633,7 @@ def process_file(
             slope,
             is_variable,
             variable_family_override,
+            variable_slots,
             fp_enabled=fp_enabled,
             dry_run=dry_run,
             compound_warning_data=compound_warning_data,
@@ -612,6 +648,7 @@ def process_file(
             slope,
             is_variable,
             variable_family_override,
+            variable_slots,
             fp_enabled=fp_enabled,
             dry_run=dry_run,
             compound_warning_data=compound_warning_data,
@@ -679,6 +716,8 @@ def process_file_wrapper(filepath, args, dry_run=False, stats=None, error_tracke
                 "compound_modifier",
             )
 
+    variable_slots = resolve_variable_slots_for_replacer(filepath)
+
     # Process the file
     return process_file(
         filepath,
@@ -688,6 +727,7 @@ def process_file_wrapper(filepath, args, dry_run=False, stats=None, error_tracke
         use_slope,
         is_variable=False,
         variable_family_override=None,
+        variable_slots=variable_slots,
         fp_enabled=(args.filename_parser is not None),
         dry_run=dry_run,
         compound_warning_data=compound_warning_data,

@@ -42,6 +42,8 @@ from FontCore.core_ttx_table_io import (
     create_or_update_namerecord_ttx,
     deduplicate_namerecords_ttx,
     deduplicate_namerecords_binary,
+    preserve_low_nameids_in_fvar_stat_ttx,
+    preserve_low_nameids_in_fvar_stat_binary,
 )
 from FontCore.core_file_collector import SUPPORTED_EXTENSIONS
 from FontCore.core_nameid_replacer_base import (
@@ -57,6 +59,7 @@ from FontCore.core_nameid_replacer_base import (
     is_variable_font_ttx,
     is_variable_font_binary,
     clean_variable_family_name,
+    resolve_variable_slots_for_replacer,
     show_compound_modifier_warning,
     is_blank_name_value,
 )
@@ -119,6 +122,7 @@ def process_ttx_file(
     family,
     is_variable: bool = False,
     variable_family_override: str | None = None,
+    variable_slots=None,
     dry_run: bool = False,
     compound_warning_data=None,
     empty_fields_only: bool = False,
@@ -145,8 +149,9 @@ def process_ttx_file(
         if is_variable_font_ttx(root):
             show_info("This is a Variable Font", dry_run, console)
 
-        # If variable naming requested, override family to include " Variable"
-        if variable_family_override is not None:
+        if is_vf and variable_slots is not None:
+            family_val = build_id16(family, is_variable=True, variable_slots=variable_slots)
+        elif variable_family_override is not None:
             base = variable_family_override if variable_family_override else family
             family_val = f"{base} Variable"
         else:
@@ -155,6 +160,20 @@ def process_ttx_file(
                 if is_variable_font_ttx(root)
                 else family
             )
+
+        if is_vf:
+            try:
+                count_pres = preserve_low_nameids_in_fvar_stat_ttx(
+                    root, name_table, threshold=17
+                )
+                if count_pres:
+                    show_info(
+                        f"Preserved and remapped {count_pres} reference(s)",
+                        dry_run,
+                        console,
+                    )
+            except Exception:
+                pass
 
         # NFC normalize after computing value
         family_val = normalize_nfc(family_val) or family_val
@@ -217,6 +236,7 @@ def process_binary_font(
     family,
     is_variable: bool = False,
     variable_family_override: str | None = None,
+    variable_slots=None,
     dry_run: bool = False,
     compound_warning_data=None,
     empty_fields_only: bool = False,
@@ -240,7 +260,9 @@ def process_binary_font(
         if is_variable_font_binary(font):
             show_info("This is a Variable Font", dry_run, console)
 
-        if variable_family_override is not None:
+        if is_vf and variable_slots is not None:
+            family_val = build_id16(family, is_variable=True, variable_slots=variable_slots)
+        elif variable_family_override is not None:
             base = variable_family_override if variable_family_override else family
             family_val = f"{base} Variable"
         else:
@@ -249,6 +271,18 @@ def process_binary_font(
                 if is_variable_font_binary(font)
                 else family
             )
+
+        if is_vf:
+            try:
+                count_pres = preserve_low_nameids_in_fvar_stat_binary(font, threshold=17)
+                if count_pres:
+                    show_info(
+                        f"Preserved and remapped {count_pres} reference(s)",
+                        dry_run,
+                        console,
+                    )
+            except Exception:
+                pass
 
         # Look for existing nameID=16 record with the specific platform/encoding
         found = False
@@ -329,6 +363,7 @@ def process_file(
     family,
     is_variable: bool = False,
     variable_family_override: str | None = None,
+    variable_slots=None,
     string_override: str | None = None,
     dry_run: bool = False,
     compound_warning_data=None,
@@ -352,6 +387,7 @@ def process_file(
             use_family,
             is_variable,
             variable_family_override,
+            variable_slots,
             dry_run=dry_run,
             compound_warning_data=compound_warning_data,
             empty_fields_only=empty_fields_only,
@@ -362,6 +398,7 @@ def process_file(
             use_family,
             is_variable,
             variable_family_override,
+            variable_slots,
             dry_run=dry_run,
             compound_warning_data=compound_warning_data,
             empty_fields_only=empty_fields_only,
@@ -446,11 +483,14 @@ def process_files(file_paths, script_args, batch_context=False):
                     "compound_modifier",
                 )
 
+        variable_slots = resolve_variable_slots_for_replacer(filepath)
+
         return process_file(
             filepath,
             use_family,
             is_variable=False,
             variable_family_override=None,
+            variable_slots=variable_slots,
             string_override=args.string,
             dry_run=dry_run,
             compound_warning_data=compound_warning_data,
