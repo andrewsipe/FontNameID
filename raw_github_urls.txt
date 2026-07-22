@@ -1,5 +1,6 @@
 # Root directory
 https://raw.githubusercontent.com/andrewsipe/FontNameID/main/.gitmodules
+https://raw.githubusercontent.com/andrewsipe/FontNameID/main/FontCore
 https://raw.githubusercontent.com/andrewsipe/FontNameID/main/NameID0Replacer.py
 https://raw.githubusercontent.com/andrewsipe/FontNameID/main/NameID10Replacer.py
 https://raw.githubusercontent.com/andrewsipe/FontNameID/main/NameID11Replacer.py
@@ -18,11 +19,19 @@ https://raw.githubusercontent.com/andrewsipe/FontNameID/main/NameID7Replacer.py
 https://raw.githubusercontent.com/andrewsipe/FontNameID/main/NameID8Replacer.py
 https://raw.githubusercontent.com/andrewsipe/FontNameID/main/NameID9Replacer.py
 https://raw.githubusercontent.com/andrewsipe/FontNameID/main/NameID_BatchRunner.py
+https://raw.githubusercontent.com/andrewsipe/FontNameID/main/NameID_CatalogApply.py
 https://raw.githubusercontent.com/andrewsipe/FontNameID/main/NameID_Deleter.py
 https://raw.githubusercontent.com/andrewsipe/FontNameID/main/NameID_Find-N-Replace.py
 https://raw.githubusercontent.com/andrewsipe/FontNameID/main/README.md
 https://raw.githubusercontent.com/andrewsipe/FontNameID/main/pyproject.toml
 https://raw.githubusercontent.com/andrewsipe/FontNameID/main/requirements.txt
+
+# tests/
+https://raw.githubusercontent.com/andrewsipe/FontNameID/main/tests/test_catalog_apply.py
+
+# tests/fixtures/catalog/
+https://raw.githubusercontent.com/andrewsipe/FontNameID/main/tests/fixtures/catalog/blk-algo.json
+https://raw.githubusercontent.com/andrewsipe/FontNameID/main/tests/fixtures/catalog/blk-grtsk.json
 
 # FontCore/
 https://raw.githubusercontent.com/andrewsipe/FontCore/main/CoreDemoTool.py
@@ -40,6 +49,7 @@ https://raw.githubusercontent.com/andrewsipe/FontCore/main/core_font_style_dicti
 https://raw.githubusercontent.com/andrewsipe/FontCore/main/core_font_utils.py
 https://raw.githubusercontent.com/andrewsipe/FontCore/main/core_gpos_repair.py
 https://raw.githubusercontent.com/andrewsipe/FontCore/main/core_logging_config.py
+https://raw.githubusercontent.com/andrewsipe/FontCore/main/core_name_attribution.py
 https://raw.githubusercontent.com/andrewsipe/FontCore/main/core_name_policies.py
 https://raw.githubusercontent.com/andrewsipe/FontCore/main/core_nameid_allocator.py
 https://raw.githubusercontent.com/andrewsipe/FontCore/main/core_nameid_replacer_base.py
@@ -48,5 +58,11 @@ https://raw.githubusercontent.com/andrewsipe/FontCore/main/core_ot_label_scanner
 https://raw.githubusercontent.com/andrewsipe/FontCore/main/core_stat_builder.py
 https://raw.githubusercontent.com/andrewsipe/FontCore/main/core_string_utils.py
 https://raw.githubusercontent.com/andrewsipe/FontCore/main/core_ttx_table_io.py
+https://raw.githubusercontent.com/andrewsipe/FontCore/main/core_variable_filename_parser.py
 https://raw.githubusercontent.com/andrewsipe/FontCore/main/core_variable_font_detection.py
 https://raw.githubusercontent.com/andrewsipe/FontCore/main/requirements.txt
+# FontCore/tests/
+https://raw.githubusercontent.com/andrewsipe/FontCore/main/tests/__init__.py
+https://raw.githubusercontent.com/andrewsipe/FontCore/main/tests/test_name_attribution.py
+https://raw.githubusercontent.com/andrewsipe/FontCore/main/tests/test_preserve_low_nameids.py
+https://raw.githubusercontent.com/andrewsipe/FontCore/main/tests/test_variable_name_policies.py
