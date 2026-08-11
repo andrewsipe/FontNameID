@@ -65,6 +65,7 @@ from FontCore.core_nameid_replacer_base import (
     resolve_variable_slots_for_replacer,
     show_compound_modifier_warning,
     is_blank_name_value,
+    infer_slope_when_italic,
 )
 
 # Get the themed console singleton
@@ -94,18 +95,6 @@ def _flag_provided(short: str, long: str) -> bool:
 
 
 """Constructors now imported from FontCore.core_name_policies (build_id17)."""
-
-
-def _has_italic_like(text: str | None) -> bool:
-    try:
-        if not text:
-            return False
-        s = str(text).lower()
-        return (
-            ("italic" in s) or ("oblique" in s) or ("slanted" in s) or ("inclined" in s)
-        )
-    except Exception:
-        return False
 
 
 def _insert_namerecord_in_order(name_table, new_record) -> None:
@@ -203,24 +192,11 @@ def process_ttx_file(
             is_italic = False
 
         style_eff = style
-        # Decide slope/style to avoid double "Italic" and ignore slope on non-italic fonts
-        slope_eff = None
-        if is_italic:
-            if slope:
-                slope_eff = slope
-            else:
-                italic_like_in_naming = _has_italic_like(style_eff)
-                if fp_enabled and not italic_like_in_naming:
-                    # Filename parser active and naming scheme lacks italic tokens → do not inject
-                    slope_eff = None
-                elif style_eff and (
-                    "italic" in style_eff.lower() or "oblique" in style_eff.lower()
-                ):
-                    slope_eff = None
-                else:
-                    slope_eff = "Italic"
-        else:
-            slope_eff = None
+        slope_eff = (
+            infer_slope_when_italic(style_eff, slope, fp_enabled=fp_enabled)
+            if is_italic
+            else None
+        )
         if is_variable_font_ttx(root):
             if variable_slots is not None:
                 new_name = build_id17_variable_default(
@@ -342,23 +318,11 @@ def process_binary_font(
         except Exception:
             is_italic = False
         style_eff = style
-        # Decide slope/style to avoid double "Italic" and ignore slope on non-italic fonts
-        slope_eff = None
-        if is_italic:
-            if slope:
-                slope_eff = slope
-            else:
-                italic_like_in_naming = _has_italic_like(style_eff)
-                if fp_enabled and not italic_like_in_naming:
-                    slope_eff = None
-                elif style_eff and (
-                    "italic" in style_eff.lower() or "oblique" in style_eff.lower()
-                ):
-                    slope_eff = None
-                else:
-                    slope_eff = "Italic"
-        else:
-            slope_eff = None
+        slope_eff = (
+            infer_slope_when_italic(style_eff, slope, fp_enabled=fp_enabled)
+            if is_italic
+            else None
+        )
         if is_variable_font_binary(font):
             if variable_slots is not None:
                 new_name = build_id17_variable_default(

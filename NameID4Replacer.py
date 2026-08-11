@@ -69,6 +69,9 @@ from FontCore.core_nameid_replacer_base import (
     resolve_variable_slots_for_replacer,
     show_compound_modifier_warning,
     is_blank_name_value,
+    has_italic_like_slope_term,
+    infer_slope_when_italic,
+    resolve_filename_parser_target,
 )
 
 # Get the themed console singleton
@@ -121,9 +124,9 @@ def _derive_family_style_from_fp(filepath: str, fp_arg: str | None):
     - "": derive from the current file's own path
     - path: derive from that sample path (applies to all files)
     """
-    if fp_arg is None:
+    target = resolve_filename_parser_target(filepath, fp_arg)
+    if target is None:
         return None, None
-    target = filepath if fp_arg == "" else fp_arg
     try:
         parsed = parse_filename(target)
         return (parsed.family or None, parsed.subfamily or None)
@@ -134,18 +137,6 @@ def _derive_family_style_from_fp(filepath: str, fp_arg: str | None):
 def _flag_provided(short: str, long: str) -> bool:
     argv = sys.argv
     return (short in argv) or (long in argv)
-
-
-def _has_italic_like(text: str | None) -> bool:
-    try:
-        if not text:
-            return False
-        s = str(text).lower()
-        return (
-            ("italic" in s) or ("oblique" in s) or ("slanted" in s) or ("inclined" in s)
-        )
-    except Exception:
-        return False
 
 
 def _is_italic_ttx(root):
@@ -256,31 +247,20 @@ def process_ttx_file(
         if variable_family_override is not None:
             base = variable_family_override if variable_family_override else family
             # Suppress italic suffix in variable mode when -fp is enabled and naming lacks italic-like term
-            italic_like_in_naming = _has_italic_like(style) or _has_italic_like(slope)
+            italic_like_in_naming = has_italic_like_slope_term(
+                style
+            ) or has_italic_like_slope_term(slope)
             use_var_italic = is_italic and not (
                 fp_enabled and not italic_like_in_naming
             )
             new_name = f"{base} {'Variable Italic' if use_var_italic else 'Variable'}"
         else:
             style_eff = style
-            # Decide slope/style to avoid double "Italic"; preserve user slope on non-italic fonts
-            slope_eff = None
-            if is_italic:
-                if slope:
-                    slope_eff = slope
-                else:
-                    italic_like_in_naming = _has_italic_like(style_eff)
-                    if fp_enabled and not italic_like_in_naming:
-                        # Filename parser active and naming scheme lacks italic tokens → do not inject
-                        slope_eff = None
-                    elif style_eff and (
-                        "italic" in style_eff.lower() or "oblique" in style_eff.lower()
-                    ):
-                        slope_eff = None
-                    else:
-                        slope_eff = "Italic"
-            else:
-                slope_eff = slope
+            slope_eff = (
+                infer_slope_when_italic(style_eff, slope, fp_enabled=fp_enabled)
+                if is_italic
+                else slope
+            )
             if is_variable_font_ttx(root):
                 if variable_slots is not None:
                     new_name = build_id4(
@@ -292,9 +272,9 @@ def process_ttx_file(
                         variable_slots=variable_slots,
                     )
                 else:
-                    italic_like_in_naming = _has_italic_like(style_eff) or _has_italic_like(
-                        slope
-                    )
+                    italic_like_in_naming = has_italic_like_slope_term(
+                        style_eff
+                    ) or has_italic_like_slope_term(slope)
                     use_var_italic = is_italic and not (
                         fp_enabled and not italic_like_in_naming
                     )
@@ -433,30 +413,20 @@ def process_binary_font(
         is_italic = _is_italic_binary(font)
         if variable_family_override is not None:
             base = variable_family_override if variable_family_override else family
-            italic_like_in_naming = _has_italic_like(style) or _has_italic_like(slope)
+            italic_like_in_naming = has_italic_like_slope_term(
+                style
+            ) or has_italic_like_slope_term(slope)
             use_var_italic = is_italic and not (
                 fp_enabled and not italic_like_in_naming
             )
             new_name = f"{base} {'Variable Italic' if use_var_italic else 'Variable'}"
         else:
             style_eff = style
-            # Decide slope/style to avoid double "Italic"; preserve user slope on non-italic fonts
-            slope_eff = None
-            if is_italic:
-                if slope:
-                    slope_eff = slope
-                else:
-                    italic_like_in_naming = _has_italic_like(style_eff)
-                    if fp_enabled and not italic_like_in_naming:
-                        slope_eff = None
-                    elif style_eff and (
-                        "italic" in style_eff.lower() or "oblique" in style_eff.lower()
-                    ):
-                        slope_eff = None
-                    else:
-                        slope_eff = "Italic"
-            else:
-                slope_eff = slope
+            slope_eff = (
+                infer_slope_when_italic(style_eff, slope, fp_enabled=fp_enabled)
+                if is_italic
+                else slope
+            )
             if is_variable_font_binary(font):
                 if variable_slots is not None:
                     new_name = build_id4(
@@ -468,9 +438,9 @@ def process_binary_font(
                         variable_slots=variable_slots,
                     )
                 else:
-                    italic_like_in_naming = _has_italic_like(style_eff) or _has_italic_like(
-                        slope
-                    )
+                    italic_like_in_naming = has_italic_like_slope_term(
+                        style_eff
+                    ) or has_italic_like_slope_term(slope)
                     use_var_italic = is_italic and not (
                         fp_enabled and not italic_like_in_naming
                     )
