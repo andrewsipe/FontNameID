@@ -57,6 +57,9 @@ Each script updates a specific NameID entry:
 - **`NameID_Deleter.py`** - Delete specific NameID entries
 - **`NameID_Find-N-Replace.py`** - Find and replace text in NameID entries
 - **`NameID_CatalogApply.py`** - Apply typographer.com catalog JSON (nameID 8/9/10, optional 0/7) before filename renames
+- **`NameID_Audit.py`** - Audit NameIDs vs filename-parser expectations; CSV report / collect mismatches for repair
+
+Declutter / product-pass notes: see `PRODUCT_REFINEMENT_NOTES.md`.
 
 ## Catalog metadata workflow (typographer.com)
 
