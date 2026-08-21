@@ -1,5 +1,6 @@
 # Root directory
 https://raw.githubusercontent.com/andrewsipe/FontNameID/main/.gitmodules
+https://raw.githubusercontent.com/andrewsipe/FontNameID/main/FontCore
 https://raw.githubusercontent.com/andrewsipe/FontNameID/main/NameID0Replacer.py
 https://raw.githubusercontent.com/andrewsipe/FontNameID/main/NameID10Replacer.py
 https://raw.githubusercontent.com/andrewsipe/FontNameID/main/NameID11Replacer.py
@@ -17,6 +18,7 @@ https://raw.githubusercontent.com/andrewsipe/FontNameID/main/NameID6Replacer.py
 https://raw.githubusercontent.com/andrewsipe/FontNameID/main/NameID7Replacer.py
 https://raw.githubusercontent.com/andrewsipe/FontNameID/main/NameID8Replacer.py
 https://raw.githubusercontent.com/andrewsipe/FontNameID/main/NameID9Replacer.py
+https://raw.githubusercontent.com/andrewsipe/FontNameID/main/NameID_Audit.py
 https://raw.githubusercontent.com/andrewsipe/FontNameID/main/NameID_BatchRunner.py
 https://raw.githubusercontent.com/andrewsipe/FontNameID/main/NameID_CatalogApply.py
 https://raw.githubusercontent.com/andrewsipe/FontNameID/main/NameID_Deleter.py
@@ -27,6 +29,7 @@ https://raw.githubusercontent.com/andrewsipe/FontNameID/main/requirements.txt
 
 # tests/
 https://raw.githubusercontent.com/andrewsipe/FontNameID/main/tests/test_catalog_apply.py
+https://raw.githubusercontent.com/andrewsipe/FontNameID/main/tests/test_slope_inference.py
 
 # tests/fixtures/catalog/
 https://raw.githubusercontent.com/andrewsipe/FontNameID/main/tests/fixtures/catalog/blk-algo.json
