@@ -1,5 +1,6 @@
 # Root directory
 https://raw.githubusercontent.com/andrewsipe/FontNameID/main/.gitmodules
+https://raw.githubusercontent.com/andrewsipe/FontNameID/main/FontCore
 https://raw.githubusercontent.com/andrewsipe/FontNameID/main/NameID0Replacer.py
 https://raw.githubusercontent.com/andrewsipe/FontNameID/main/NameID10Replacer.py
 https://raw.githubusercontent.com/andrewsipe/FontNameID/main/NameID11Replacer.py
@@ -22,6 +23,7 @@ https://raw.githubusercontent.com/andrewsipe/FontNameID/main/NameID_BatchRunner.
 https://raw.githubusercontent.com/andrewsipe/FontNameID/main/NameID_CatalogApply.py
 https://raw.githubusercontent.com/andrewsipe/FontNameID/main/NameID_Deleter.py
 https://raw.githubusercontent.com/andrewsipe/FontNameID/main/NameID_Find-N-Replace.py
+https://raw.githubusercontent.com/andrewsipe/FontNameID/main/PRODUCT_REFINEMENT_NOTES.md
 https://raw.githubusercontent.com/andrewsipe/FontNameID/main/README.md
 https://raw.githubusercontent.com/andrewsipe/FontNameID/main/pyproject.toml
 https://raw.githubusercontent.com/andrewsipe/FontNameID/main/requirements.txt
@@ -36,6 +38,7 @@ https://raw.githubusercontent.com/andrewsipe/FontNameID/main/tests/fixtures/cata
 
 # FontCore/
 https://raw.githubusercontent.com/andrewsipe/FontCore/main/CoreDemoTool.py
+https://raw.githubusercontent.com/andrewsipe/FontCore/main/PRODUCT_REFINEMENT_NOTES.md
 https://raw.githubusercontent.com/andrewsipe/FontCore/main/README.md
 https://raw.githubusercontent.com/andrewsipe/FontCore/main/__init__.py
 https://raw.githubusercontent.com/andrewsipe/FontCore/main/core_console_config.py
