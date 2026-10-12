@@ -245,5 +245,16 @@ python NameID1Replacer.py /path/to/fonts -R
 
 - [Filename_Tools](https://github.com/andrewsipe/Filename_Tools) - Clean filenames before metadata updates
 - [FileRenamer](https://github.com/andrewsipe/FileRenamer) - Rename files to match PostScript names
-- [FontMetricsNormalizer](https://github.com/andrewsipe/FontMetricsNormalizer) - Normalize font metrics
+- [Ebrium](https://github.com/andrewsipe/ebrium) - Normalize vertical metrics across families
 
+
+## FontCore dependency
+
+This tool imports the shared [`FontCore`](https://github.com/andrewsipe/FontCore) package (`import FontCore…`). It is **not** vendored or a submodule here. On a fresh machine:
+
+```bash
+git clone https://github.com/andrewsipe/FontCore.git ../FontCore
+python3 -m pip install -e ../FontCore
+```
+
+(In the author's monorepo checkout, `./FontCore` is a local symlink to `../FontCore/src/FontCore`; it is git-ignored.)
