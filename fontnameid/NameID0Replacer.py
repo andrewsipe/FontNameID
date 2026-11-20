@@ -554,6 +554,7 @@ def main():
     sys.argv = _preprocess_explicit_syntax(sys.argv, 0)
 
     parser = argparse.ArgumentParser(
+        allow_abbrev=False,
         description=(
             "Replace nameID='0' (Copyright) records. Builds a standard notice from "
             "per-font metadata unless -str/--string overrides."

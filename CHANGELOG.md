@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1] - 2026-11-20
+
+### Fixed
+- The replacer commands no longer accept abbreviated options. A bare `-d` on an ID other than 9 was being read
+  as a prefix of `-dmr`, so `fontnameid 8 -d fonts/` could delete Mac name records and write the placeholder
+  default instead of failing. Use the full flag names; wrong flags now exit with "unrecognized arguments".
+
 ## [0.2.0] - 2026-11-20
 
 First installable release.

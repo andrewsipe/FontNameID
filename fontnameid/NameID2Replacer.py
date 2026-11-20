@@ -654,6 +654,7 @@ def main():
     sys.argv = _preprocess_explicit_syntax(sys.argv, 2)
 
     parser = argparse.ArgumentParser(
+        allow_abbrev=False,
         description="Replace nameID='2' (Font Subfamily) records in font files with automatic detection",
         epilog="Supported formats: TTF, OTF, WOFF, WOFF2, TTX",
     )

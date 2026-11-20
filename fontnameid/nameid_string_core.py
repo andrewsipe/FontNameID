@@ -328,6 +328,7 @@ def make_replacer(name_id: int) -> SimpleNamespace:
 
     def build_parser() -> argparse.ArgumentParser:
         parser = argparse.ArgumentParser(
+            allow_abbrev=False,
             description=f"Replace nameID='{nid}' ({spec.label}) records in font files",
             epilog="Supported formats: TTF, OTF, WOFF, WOFF2, TTX",
         )

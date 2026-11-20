@@ -27,7 +27,7 @@ No Enhanced/base pairs. No dead one-shots. BatchRunner capability discovery mean
 4. **Audit as first-class** — Promote Audit in packaging (console script) alongside BatchRunner.
 5. **ID15** — Explicitly document “not shipped” vs add a Prefered-family replacer if needed.
 6. **Legacy flags** — BatchRunner / some replacers still map `--only-add-missing` → `--empty-fields-only`; drop aliases on a major version.
-7. **`raw_github_urls.txt`** — PushCore noise; exclude from release artifacts.
+7. **`raw_github_urls.txt`** — PushCore noise; exclude from release artifacts. (File removed and gitignored 2026-11-20.)
 
 ## Do not lose
 
@@ -40,5 +40,5 @@ No Enhanced/base pairs. No dead one-shots. BatchRunner capability discovery mean
 
 - Package `fontnameid/` with one `fontnameid <target>` command; scripts keep their names inside the package.
 - Vendored FontCore (16 modules, v0.2.1); `[tool.fontcore-vendor]` in `pyproject.toml`.
-- Open: argparse prefix matching lets `-d` (a wrong flag on IDs other than 9) match `-dmr`; consider `allow_abbrev=False`.
+- Done 2026-11-20 (0.2.1): `allow_abbrev=False` on the replacer parsers, so a wrong flag like `-d` on ID 8 no longer matches `-dmr`. `batch`, `audit`, `catalog`, `delete` and `replace` parsers still allow abbreviations.
 - Open: replacers 0-7, 16, 17 still carry per-ID processing logic and argparse blocks; `-fp` and `paths` differ between them.

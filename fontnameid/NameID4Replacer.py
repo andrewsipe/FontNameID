@@ -724,6 +724,7 @@ def main():
     sys.argv = _preprocess_explicit_syntax(sys.argv, 4)
 
     parser = argparse.ArgumentParser(
+        allow_abbrev=False,
         description="Replace nameID='4' (Full Font Name) records in font files",
         epilog="Supported formats: TTF, OTF, WOFF, WOFF2, TTX",
     )

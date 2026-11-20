@@ -793,6 +793,7 @@ def main():
     sys.argv = _preprocess_explicit_syntax(sys.argv, 3)
 
     parser = argparse.ArgumentParser(
+        allow_abbrev=False,
         description="Replace nameID='3' records in font files with version;vendor;filename format",
         epilog="Supported formats: TTF, OTF, WOFF, WOFF2, TTX",
     )

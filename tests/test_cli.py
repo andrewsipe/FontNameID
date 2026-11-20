@@ -71,3 +71,17 @@ def test_another_ids_flag_is_still_refused(tmp_path):
     result = _cli("8", "-d", "Jane", "-y", str(font))
     assert result.returncode != 0
     assert font.read_bytes() == before
+
+
+def test_a_wrong_flag_is_not_read_as_an_abbreviation(tmp_path):
+    """ID 8 has no -d; it must not be read as a prefix of -dmr (which would delete Mac records
+    and write the placeholder default). Same for abbreviated long options."""
+    from test_string_replacers import MAC
+
+    font = _build_font(tmp_path / "Probe-Regular.ttf", mac=MAC)
+    before = font.read_bytes()
+    for bad in (["-d"], ["--delete-mac"], ["--empty"]):
+        result = _cli("8", *bad, "-y", str(font))
+        assert result.returncode == 2, (bad, result.stdout[-300:])
+        assert "unrecognized arguments" in result.stderr
+        assert font.read_bytes() == before

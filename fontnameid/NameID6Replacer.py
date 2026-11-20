@@ -468,6 +468,7 @@ def main():
     sys.argv = _preprocess_explicit_syntax(sys.argv, 6)
 
     parser = argparse.ArgumentParser(
+        allow_abbrev=False,
         description="Replace nameID='6' records in font files with the filename",
         epilog="Supported formats: TTF, OTF, WOFF, WOFF2, TTX",
     )

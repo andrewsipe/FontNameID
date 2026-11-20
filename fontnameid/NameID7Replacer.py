@@ -385,6 +385,7 @@ def main():
     sys.argv = _preprocess_explicit_syntax(sys.argv, 7)
 
     parser = argparse.ArgumentParser(
+        allow_abbrev=False,
         description=(
             "Replace nameID='7' (Trademark) records. Builds a standard notice from "
             "per-font metadata unless -str/--string overrides."

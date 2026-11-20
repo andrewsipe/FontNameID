@@ -505,6 +505,7 @@ def main():
     sys.argv = _preprocess_explicit_syntax(sys.argv, 16)
 
     parser = argparse.ArgumentParser(
+        allow_abbrev=False,
         description="Replace nameID='16' (Typographic Family) records in font files",
         epilog="Supported formats: TTF, OTF, WOFF, WOFF2, TTX",
     )
