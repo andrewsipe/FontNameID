@@ -65,7 +65,7 @@ def _build_font(
 
 def _run(nid: int, *args: str, target: Path) -> subprocess.CompletedProcess:
     return subprocess.run(
-        [sys.executable, str(ROOT / f"NameID{nid}Replacer.py"), *args, str(target)],
+        [sys.executable, "-m", f"fontnameid.NameID{nid}Replacer", *args, str(target)],
         capture_output=True,
         text=True,
         cwd=ROOT,
@@ -200,8 +200,7 @@ def test_ttx_dry_run_changes_nothing(nid, tmp_path):
 
 def test_batch_runner_discovers_each_replacer_with_its_own_flag():
     """BatchRunner reads name_id / description / supported_flags from each wrapper."""
-    sys.path.insert(0, str(ROOT))
-    import NameID_BatchRunner as batch
+    from fontnameid import NameID_BatchRunner as batch
 
     expected = {
         8: ("Manufacturer", "manufacturer"),

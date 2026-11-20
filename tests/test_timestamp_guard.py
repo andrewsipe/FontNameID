@@ -11,8 +11,8 @@ import pathlib
 import unittest
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-GLOBS = ['NameID*.py']
-READ_ONLY = [("NameID_Audit.py", "audit_file")]
+GLOBS = ["fontnameid/NameID*.py", "fontnameid/nameid*.py"]
+READ_ONLY = [("fontnameid/NameID_Audit.py", "audit_file")]
 
 
 def _calls(path):

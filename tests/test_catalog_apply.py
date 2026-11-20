@@ -9,16 +9,9 @@ from pathlib import Path
 from fontTools.fontBuilder import FontBuilder
 from fontTools.ttLib.tables import _g_l_y_f as glyf_module
 
-_project_root = Path(__file__).resolve().parents[2]
-if str(_project_root) not in sys.path:
-    sys.path.insert(0, str(_project_root))
-
-_fontnameid = _project_root / "FontNameID"
-if str(_fontnameid) not in sys.path:
-    sys.path.insert(0, str(_fontnameid))
 
 from FontCore.core_metadata_catalog import catalog_name_values, load_catalog
-from NameID_CatalogApply import _process_single_file, process_files
+from fontnameid.NameID_CatalogApply import _process_single_file, process_files
 from FontCore.core_nameid_replacer_base import ProcessingStats
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures" / "catalog"

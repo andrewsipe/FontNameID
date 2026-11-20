@@ -1,79 +1,86 @@
-# NameID Tools
+# FontNameID
 
-NameID table manipulation and replacement tools for font metadata editing.
+**Version 0.2.0**
 
-## Overview
+Replace, audit and batch-edit the name-table (nameID) records of font files: copyright, family and style names, version, PostScript name, vendor and license text.
 
-Scripts for updating specific NameID entries in font files. Each script targets a specific NameID (0-17) and provides specialized logic for that metadata field.
+Typical pipeline: clean filenames ([Filename_Tools](https://github.com/andrewsipe/Filename_Tools)) → **fontnameid** → structural tidy ([FontFixer](https://github.com/andrewsipe/FontFixer)) → metrics ([ebrium](https://github.com/andrewsipe/ebrium)).
 
-## Scripts
+## Install
 
-### `NameID_BatchRunner.py`
-**Run multiple NameID replacers in one go** with pass-through flags.
+Preferred: [uv](https://docs.astral.sh/uv/):
 
-Batch processor that can run multiple NameID replacer scripts in a single operation, forwarding flags only to scripts that support them.
-
-**Usage:**
 ```bash
-# Run ID1, ID4, ID16, ID17 with filename parsing
-python NameID_BatchRunner.py --ids 1,4,16,17 -fp -- /path/to/fonts
-
-# Run ID1 + ID4 only, conservative Book/Normal handling
-python NameID_BatchRunner.py --ids 1,4 --regular-synonyms conservative --yes -- /path/to/fonts
-
-# Run all supported IDs
-python NameID_BatchRunner.py --ids all -- /path/to/fonts -R
+uv tool install "git+https://github.com/andrewsipe/FontNameID.git"
+# later: uv tool upgrade fontnameid
 ```
 
-**Options:**
-- `--ids` - Comma-separated list of NameID numbers or "all"
-- Flags are forwarded to individual scripts that support them
-- Use `--` to separate batch options from script options
+Or [pipx](https://pipx.pypa.io/): `pipx install "git+https://github.com/andrewsipe/FontNameID.git"`.
+From a clone: `uv tool install --editable .` (edits take effect immediately).
 
-### Individual NameID Replacers
+Requires Python 3.10+. FontCore is vendored in `FontCore/` (see `FontCore/VENDOR.md`), so there is nothing else to install. For TTX files, `pip install lxml` (or `fontnameid[lxml]`) keeps comments and whitespace.
 
-Each script updates a specific NameID entry:
+## One command
 
-- **`NameID0Replacer.py`** - Copyright notice (auto-builds from nameID 8/9 + year sources)
-- **`NameID1Replacer.py`** - Family name
-- **`NameID2Replacer.py`** - Subfamily name
-- **`NameID3Replacer.py`** - Unique identifier
-- **`NameID4Replacer.py`** - Full font name
-- **`NameID5Replacer.py`** - Version string
-- **`NameID6Replacer.py`** - PostScript name
-- **`NameID7Replacer.py`** - Trademark notice (auto-builds from nameID 16/1 + nameID 8/9)
-- **`NameID8Replacer.py`** - Manufacturer name
-- **`NameID9Replacer.py`** - Designer name
-- **`NameID10Replacer.py`** - Description
-- **`NameID11Replacer.py`** - Vendor URL
-- **`NameID12Replacer.py`** - Designer URL
-- **`NameID13Replacer.py`** - License description
-- **`NameID14Replacer.py`** - License URL
-- **`NameID16Replacer.py`** - Typographic family name
-- **`NameID17Replacer.py`** - Typographic subfamily name
+`fontnameid <target> [options] PATH ...`
 
-### Utility Scripts
+| Target | What it does |
+|---|---|
+| `0` … `14`, `16`, `17` | Replace that one nameID (copyright, family, subfamily, unique ID, full name, version, PostScript name, trademark, manufacturer, designer, description, URLs, license, typographic family and subfamily). |
+| `batch` | Run several replacers in one pass (`--ids 1,4,16,17`, or `--ids all`). |
+| `audit` | Compare name records with what the filename parser expects; CSV report. |
+| `catalog` | Apply a typographer.com catalog (nameID 8/9/10, optional 0/7). |
+| `delete` | Delete name records. |
+| `replace` | Find and replace text inside name records. |
 
-- **`NameID_Deleter.py`** - Delete specific NameID entries
-- **`NameID_Find-N-Replace.py`** - Find and replace text in NameID entries
-- **`NameID_CatalogApply.py`** - Apply typographer.com catalog JSON (nameID 8/9/10, optional 0/7) before filename renames
-- **`NameID_Audit.py`** - Audit NameIDs vs filename-parser expectations; CSV report / collect mismatches for repair
+`fontnameid <target> -h` lists that target's options.
+
+**Each ID has its own value flag.** ID 8 takes `-man`, ID 9 takes `-d`, ID 10 `-desc`, ID 11 `-vu`, ID 12 `-du`, ID 13 `-l`, ID 14 `-lu`. Another ID's flag is refused, so a designer name cannot land in the manufacturer slot by changing only the number.
+
+```bash
+fontnameid 8 -man "Acme Foundry" -r fonts/        # nameID 8 only
+fontnameid batch --ids 1,4,16,17 -fp -- fonts/    # filename-driven names
+fontnameid audit fonts/ --csv report.csv
+```
+
+Fonts keep their original `head.modified` timestamp when saved.
+
+## Coming from the old scripts
+
+| Old | New |
+|---|---|
+| `python NameID8Replacer.py ...` | `fontnameid 8 ...` |
+| `python NameID_BatchRunner.py ...` | `fontnameid batch ...` |
+| `python NameID_CatalogApply.py ...` | `fontnameid catalog ...` |
+| `python NameID_Audit.py ...` | `fontnameid audit ...` |
+| `python NameID_Deleter.py ...` | `fontnameid delete ...` |
+| `python NameID_Find-N-Replace.py ...` | `fontnameid replace ...` |
+
+The scripts still live in the `fontnameid/` package (`python -m fontnameid.NameID8Replacer ...`). The `-fp` flag matters only to IDs 1, 4, 16 and 17 (and `batch`); on the string IDs it is accepted and ignored.
 
 Declutter / product-pass notes: see `PRODUCT_REFINEMENT_NOTES.md`.
 
+## Development
+
+```bash
+uv venv && uv pip install -e ".[test]" && pytest
+```
+
+Refresh the vendored FontCore from inside a FontCore checkout: `python tools/vendor_fontcore.py sync ../FontNameID`.
+
 ## Catalog metadata workflow (typographer.com)
 
-FontExtractor2 collects family metadata passively (or via `metadata typographer`) into **`~/Downloads/_Fonts/metadata/typographer/{slug}.json`**. Use **`NameID_CatalogApply.py`** to stamp that data into font files **before** you rename filenames or run pointed NameID passes.
+FontExtractor2 collects family metadata passively (or via `metadata typographer`) into **`~/Downloads/_Fonts/metadata/typographer/{slug}.json`**. Use **`fontnameid catalog`** to stamp that data into font files **before** you rename filenames or run pointed NameID passes.
 
-> **Note:** As of the metadata pipeline collapse, FontExtractor2 now stamps catalog nameID 8/9/10 automatically at the end of an extraction session, writing `_META` font copies next to the pristine originals (see FontExtractor2 README, "Automatic metadata stamping"). Use **`FontExtractor2 metadata finalize`** to backfill missing `_META` copies when JSON exists but some fonts were skipped. `NameID_CatalogApply.py` remains useful for in-place stamping on originals, post-rename fonts, bulk re-application, fonts obtained outside the browser, or when you want different `--ids` (e.g. derived 0/7).
+> **Note:** As of the metadata pipeline collapse, FontExtractor2 now stamps catalog nameID 8/9/10 automatically at the end of an extraction session, writing `_META` font copies next to the pristine originals (see FontExtractor2 README, "Automatic metadata stamping"). Use **`FontExtractor2 metadata finalize`** to backfill missing `_META` copies when JSON exists but some fonts were skipped. `fontnameid catalog` remains useful for in-place stamping on originals, post-rename fonts, bulk re-application, fonts obtained outside the browser, or when you want different `--ids` (e.g. derived 0/7).
 
 **Recommended order:**
 
 1. Extract fonts (FontExtractor2)
 2. Metadata JSON collected to `~/Downloads/_Fonts/metadata/typographer/`
-3. **`NameID_CatalogApply.py`** — stamp catalog nameIDs into files
+3. **`fontnameid catalog`** — stamp catalog nameIDs into files
 4. Rename files (Filename_Tools / FileRenamer)
-5. `NameID_BatchRunner` or individual replacers for nameIDs 1/4/16/17, etc.
+5. `fontnameid batch` or individual replacers for nameIDs 1/4/16/17, etc.
 
 ### Batch mode (whole directory)
 
@@ -81,13 +88,13 @@ Omit `--catalog` to auto-match each font file to a catalog JSON by filename (`Am
 
 ```bash
 # All DRT fonts in one pass (289 files → 56 families)
-python NameID_CatalogApply.py ~/Downloads/_Fonts/WOFF2/DRT \
+fontnameid catalog ~/Downloads/_Fonts/WOFF2/DRT \
   --catalog-prefix drt \
   --library-dir ~/Downloads/_Fonts/metadata/typographer \
   -n -y
 
 # Apply for real
-python NameID_CatalogApply.py ~/Downloads/_Fonts/WOFF2/DRT \
+fontnameid catalog ~/Downloads/_Fonts/WOFF2/DRT \
   --catalog-prefix drt \
   --library-dir ~/Downloads/_Fonts/metadata/typographer \
   --yes
@@ -96,7 +103,7 @@ python NameID_CatalogApply.py ~/Downloads/_Fonts/WOFF2/DRT \
 ### Single-family mode
 
 ```bash
-python NameID_CatalogApply.py ~/Downloads/_Fonts/WOFF2/DRT/AlightSlab-*.woff2 \
+fontnameid catalog ~/Downloads/_Fonts/WOFF2/DRT/AlightSlab-*.woff2 \
   --catalog drt-alight-slab \
   --library-dir ~/Downloads/_Fonts/metadata/typographer \
   --yes
@@ -132,20 +139,20 @@ Catalog JSON shape is documented in [FontExtractor2/README.md](../FontExtractor2
 ### Update Family Name (NameID 1)
 
 ```bash
-python NameID1Replacer.py /path/to/fonts -R
+fontnameid 1 /path/to/fonts -R
 ```
 
 ### Update Multiple NameIDs
 
 ```bash
 # Using batch runner
-python NameID_BatchRunner.py --ids 1,4,16,17 -- /path/to/fonts -R
+fontnameid batch --ids 1,4,16,17 -- /path/to/fonts -R
 
 # Or run individually
-python NameID1Replacer.py /path/to/fonts -R
-python NameID4Replacer.py /path/to/fonts -R
-python NameID16Replacer.py /path/to/fonts -R
-python NameID17Replacer.py /path/to/fonts -R
+fontnameid 1 /path/to/fonts -R
+fontnameid 4 /path/to/fonts -R
+fontnameid 16 /path/to/fonts -R
+fontnameid 17 /path/to/fonts -R
 ```
 
 ### Copyright and Trademark (NameID 0 and 7)
@@ -161,8 +168,8 @@ These scripts build standard legal notices from existing font metadata when you 
 | `{year}` | `--current-year` → `--year` → `head.created` → existing nameID 0 → current year |
 
 ```bash
-python NameID0Replacer.py /path/to/fonts -R
-python NameID_BatchRunner.py --ids 0 --yes -- /path/to/fonts -R
+fontnameid 0 /path/to/fonts -R
+fontnameid batch --ids 0 --yes -- /path/to/fonts -R
 ```
 
 **Trademark (ID 7)** — default format:
@@ -174,8 +181,8 @@ python NameID_BatchRunner.py --ids 0 --yes -- /path/to/fonts -R
 | `{holder}` | Same as copyright (`-d` overrides; else nameID 8 & 9) |
 
 ```bash
-python NameID7Replacer.py /path/to/fonts -R
-python NameID_BatchRunner.py --ids 0,7 --yes -- /path/to/fonts -R
+fontnameid 7 /path/to/fonts -R
+fontnameid batch --ids 0,7 --yes -- /path/to/fonts -R
 ```
 
 `-d` / `--designer` is the rights-holder override for both scripts (manufacturer/designer credit, not strictly the designer field). Use `-str` / `--string` for a fully custom notice.
@@ -185,7 +192,7 @@ python NameID_BatchRunner.py --ids 0,7 --yes -- /path/to/fonts -R
 Many scripts support `-fp, --filename-parsing` to derive values from filenames:
 
 ```bash
-python NameID1Replacer.py /path/to/fonts -R -fp
+fontnameid 1 /path/to/fonts -R -fp
 ```
 
 ## Common Options
@@ -216,8 +223,8 @@ pipx install git+https://github.com/andrewsipe/FontNameID.git
 
 After installation, run scripts:
 ```bash
-python NameID1Replacer.py /path/to/fonts -R
-python NameID_BatchRunner.py --ids 1,4,16,17 -- /path/to/fonts -R
+fontnameid 1 /path/to/fonts -R
+fontnameid batch --ids 1,4,16,17 -- /path/to/fonts -R
 ```
 
 **Upgrade:** `pipx upgrade font-nameid`  
@@ -238,7 +245,7 @@ pip install -r requirements.txt
 
 3. Run scripts:
 ```bash
-python NameID1Replacer.py /path/to/fonts -R
+fontnameid 1 /path/to/fonts -R
 ```
 
 ## Related Tools

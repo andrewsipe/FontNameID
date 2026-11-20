@@ -1,21 +1,38 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "font-nameid"
-version = "0.1.0"
-description = "NameID table manipulation and replacement tools for font metadata editing"
+name = "fontnameid"
+version = "0.2.0"
+description = "Replace, audit and batch-edit OpenType name-table (nameID) records"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
+authors = [
+    { name = "Andrew Sipe" }
+]
+license = { text = "MIT" }
 dependencies = [
     "fonttools>=4.40.0",
     "rich>=13.0.0",
 ]
 
+[project.optional-dependencies]
+lxml = ["lxml>=4.9"]
+test = ["pytest>=7.4"]
+
+[project.urls]
+Homepage = "https://github.com/andrewsipe/FontNameID"
+Repository = "https://github.com/andrewsipe/FontNameID"
+
+[project.scripts]
+fontnameid = "fontnameid.cli:main"
+
 [tool.setuptools]
-packages = ["."]
+packages = ["fontnameid", "FontCore"]
 
-[tool.setuptools.package-data]
-"*" = ["*.py", "core/**/*"]
+[tool.pytest.ini_options]
+testpaths = ["tests"]
 
+[tool.fontcore-vendor]
+modules = ["core_console_styles", "core_file_collector", "core_filename_parts_parser", "core_font_style_dictionaries", "core_metadata_catalog", "core_name_attribution", "core_name_policies", "core_nameid_replacer_base", "core_string_utils", "core_ttx_table_io", "core_variable_filename_parser", "core_variable_font_detection"]

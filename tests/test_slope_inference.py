@@ -5,9 +5,6 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-_project_root = Path(__file__).resolve().parents[2]
-if str(_project_root) not in sys.path:
-    sys.path.insert(0, str(_project_root))
 
 from FontCore.core_name_policies import build_id17, normalize_style_and_slope_for_id1_id4
 from FontCore.core_nameid_replacer_base import (
@@ -74,7 +71,7 @@ def test_normalize_keeps_reverse_compound_slopes():
 
 
 def test_audit_accepts_reverse_compound_slopes():
-    from FontNameID.NameID_Audit import has_disallowed_double_slope
+    from fontnameid.NameID_Audit import has_disallowed_double_slope
 
     assert not has_disallowed_double_slope("Black Reverse Italic")
     assert not has_disallowed_double_slope("Regular Reverse Slanted")

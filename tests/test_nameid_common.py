@@ -6,11 +6,7 @@ import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
-
-from nameid_common import (  # noqa: E402
+from fontnameid.nameid_common import (  # noqa: E402
     adjust_ttx_whitespace,
     flag_provided,
     get_filename_part,

@@ -35,3 +35,10 @@ No Enhanced/base pairs. No dead one-shots. BatchRunner capability discovery mean
 - CatalogApply batch auto-match (`--catalog-prefix`, library-dir).
 - Audit `--expect-fp` / collect-mismatch / `--from-csv` repair workflows.
 - Filename-parse (`-fp`) + variable-slot policies on 1/4/16/17 (tests cover slope inference).
+
+## Packaging pass (2026-11-20)
+
+- Package `fontnameid/` with one `fontnameid <target>` command; scripts keep their names inside the package.
+- Vendored FontCore (16 modules, v0.2.1); `[tool.fontcore-vendor]` in `pyproject.toml`.
+- Open: argparse prefix matching lets `-d` (a wrong flag on IDs other than 9) match `-dmr`; consider `allow_abbrev=False`.
+- Open: replacers 0-7, 16, 17 still carry per-ID processing logic and argparse blocks; `-fp` and `paths` differ between them.
