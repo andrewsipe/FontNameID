@@ -415,7 +415,7 @@ def process_binary_font(
 ):
     """Process binary font files (TTF, OTF, WOFF, WOFF2)"""
     try:
-        font = TTFont(filepath)
+        font = TTFont(filepath, recalcTimestamp=False)
         is_vf = is_variable_font_binary(font)
         if is_vf:
             show_info("This is a Variable Font", dry_run, console)
@@ -587,7 +587,7 @@ def get_preview_subfamily(filepath, subfamily_override, string_override=None):
             root = tree.getroot()
             metrics = get_font_metrics_ttx(root)
         else:
-            font = TTFont(filepath)
+            font = TTFont(filepath, recalcTimestamp=False)
             metrics = get_font_metrics_binary(font)
             font.close()
 

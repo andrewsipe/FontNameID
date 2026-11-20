@@ -439,7 +439,7 @@ def process_binary_font(
 ):
     """Process binary font files (TTF, OTF, WOFF, WOFF2)"""
     try:
-        font = TTFont(filepath)
+        font = TTFont(filepath, recalcTimestamp=False)
         if is_variable_font_binary(font):
             show_info("This is a Variable Font", dry_run, console)
 
@@ -691,7 +691,7 @@ def get_preview_name(
                                 )
 
             else:
-                font = TTFont(filepath)
+                font = TTFont(filepath, recalcTimestamp=False)
 
                 # Extract version from head table
                 if "head" in font and hasattr(font["head"], "fontRevision"):
@@ -725,7 +725,7 @@ def get_preview_name(
                     root = tree.getroot()
                     is_italic = _is_italic_ttx(root)
                 else:
-                    font = TTFont(filepath)
+                    font = TTFont(filepath, recalcTimestamp=False)
                     is_italic = _is_italic_binary(font)
                     font.close()
             except Exception:

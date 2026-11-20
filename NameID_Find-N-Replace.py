@@ -200,7 +200,7 @@ def find_replace_in_name_table(
             cs.get_console()
         )
 
-        font = TTFont(font_path)
+        font = TTFont(font_path, recalcTimestamp=False)
 
         if "name" not in font:
             cs.StatusIndicator("error").add_file(
@@ -316,7 +316,7 @@ def find_replace_in_name_table(
 def list_name_records(font_path: str) -> None:
     """List all name records in a font for inspection."""
     try:
-        font = TTFont(font_path)
+        font = TTFont(font_path, recalcTimestamp=False)
         if "name" not in font:
             cs.StatusIndicator("error").add_file(
                 font_path, filename_only=False
@@ -534,7 +534,7 @@ def preview_changes(
 
     for font_path in font_paths:
         try:
-            font = TTFont(font_path)
+            font = TTFont(font_path, recalcTimestamp=False)
 
             if "name" not in font:
                 font.close()

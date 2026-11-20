@@ -194,7 +194,7 @@ def process_binary_font(
             console
         )
 
-        font = TTFont(filepath)
+        font = TTFont(filepath, recalcTimestamp=False)
         if "name" not in font:
             cs.StatusIndicator("error").add_file(
                 filepath, filename_only=False

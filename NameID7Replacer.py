@@ -204,7 +204,7 @@ def process_binary_font(
 ):
     """Process binary font files (TTF, OTF, WOFF, WOFF2)"""
     try:
-        font = TTFont(filepath)
+        font = TTFont(filepath, recalcTimestamp=False)
 
         # Priority: string_override → constructed trademark string
         if string_override:

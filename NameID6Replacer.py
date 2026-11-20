@@ -309,7 +309,7 @@ def process_binary_font(
 ):
     """Process binary font files (TTF, OTF, WOFF, WOFF2)"""
     try:
-        font = TTFont(filepath)
+        font = TTFont(filepath, recalcTimestamp=False)
         if is_variable_font_binary(font):
             show_info("This is a Variable Font", dry_run, console)
 

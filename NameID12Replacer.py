@@ -172,7 +172,7 @@ def process_binary_font(
 ):
     """Process binary font files (TTF, OTF, WOFF, WOFF2)"""
     try:
-        font = TTFont(filepath)
+        font = TTFont(filepath, recalcTimestamp=False)
 
         if "name" not in font:
             show_warning(filepath, "No name table found", False, console)

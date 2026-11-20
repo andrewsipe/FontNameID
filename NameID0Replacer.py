@@ -316,7 +316,7 @@ def process_binary_font(
 ):
     """Process binary font files (TTF, OTF, WOFF, WOFF2)"""
     try:
-        font = TTFont(filepath)
+        font = TTFont(filepath, recalcTimestamp=False)
 
         # Priority: string_override → constructed copyright string
         if string_override:
@@ -464,7 +464,7 @@ def get_preview_name(
                 use_current_year=use_current_year,
             )
 
-        font = TTFont(filepath)
+        font = TTFont(filepath, recalcTimestamp=False)
         try:
             return _build_copyright_from_binary(
                 font,
