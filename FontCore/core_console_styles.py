@@ -1013,8 +1013,8 @@ def prompt_input(message: str, console: Optional["_Console"] = None) -> str:
             console_instance.print(f"{INPUT_LABEL} ", end="")
             result = input()
         else:
-            print(f"{INPUT_LABEL} {message}")
-            print(f"{INPUT_LABEL} ", end="")
+            emit(f"{INPUT_LABEL} {message}")
+            emit(f"{INPUT_LABEL} ", end="")
             result = input()
 
     except (EOFError, KeyboardInterrupt):
@@ -1057,8 +1057,8 @@ def prompt_confirm(
                 end="",
             )
         else:
-            print(f"{INPUT_LABEL} {message}")
-            print(
+            emit(f"{INPUT_LABEL} {message}")
+            emit(
                 f"{INPUT_LABEL} {action_prompt} [input][bold]({default_str}): [/bold][/input]",
                 end="",
             )

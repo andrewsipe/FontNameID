@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.2] - 2026-11-20
+
+### Fixed
+- The option list shown before a run now names the real flags (`-n`, `-r`, `-y`; it printed `-dry`, `-R` and `-yes, --confirm`)
+  and now lists `-y`, which it never did.
+- The compound-modifier warning points at `fontnameid replace` instead of the old `Find-N-Replace` script.
+- FontCore refreshed to v0.2.2.
+
 ## [0.2.1] - 2026-11-20
 
 ### Fixed

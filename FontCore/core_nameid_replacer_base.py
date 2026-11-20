@@ -463,7 +463,7 @@ def show_compound_modifier_warning(
     ).add_item(
         "[warning]Results may be incorrect. Consider reformatting filename to avoid PascalCase splitting.[/warning]"
     ).add_item(
-        "[warning]To fix: run Find-N-Replace with the RemoveModifierSpaces preset.[/warning]"
+        "[warning]To fix: run fontnameid replace with the RemoveModifierSpaces preset.[/warning]"
     ).emit(console=console)
 
 
@@ -570,13 +570,13 @@ def run_workflow(
 
     # Check for common flags
     if getattr(script_args, "dry_run", False):
-        active_flags.append("-dry, --dry-run : Preview mode - no changes will be saved")
+        active_flags.append("-n, --dry-run : preview only; no changes are saved")
 
-    if getattr(script_args, "confirm", False):
-        active_flags.append("-yes, --confirm : Auto-confirm all prompts")
+    if getattr(script_args, "yes", False):
+        active_flags.append("-y, --yes : skip the confirmation")
 
     if getattr(script_args, "recursive", False):
-        active_flags.append("-R, --recursive : Process directories recursively")
+        active_flags.append("-r, --recursive : include subfolders")
 
     if getattr(script_args, "filename_parser", False):
         active_flags.append("-fp, --filename-parser : Derive values from font filename")
