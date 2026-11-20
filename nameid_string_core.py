@@ -25,6 +25,7 @@ from typing import Dict, Tuple
 import FontCore.core_console_styles as cs
 from fontTools.ttLib import TTFont
 from fontTools.ttLib.tables._n_a_m_e import NameRecord
+from nameid_common import insert_namerecord_in_order, preprocess_explicit_syntax
 from FontCore.core_file_collector import SUPPORTED_EXTENSIONS
 from FontCore.core_nameid_replacer_base import (
     is_blank_name_value,
@@ -97,28 +98,6 @@ SPECS: Dict[int, StringSpec] = {
 }
 
 
-def _insert_namerecord_in_order(name_table, new_record) -> None:
-    try:
-        target_id = int(new_record.get("nameID"))
-    except Exception:
-        target_id = 999999
-    insert_at = len(list(name_table))
-    idx = 0
-    for child in list(name_table):
-        if child.tag != "namerecord":
-            idx += 1
-            continue
-        try:
-            child_id = int(child.get("nameID", "999999"))
-        except Exception:
-            child_id = 999999
-        if child_id > target_id:
-            insert_at = idx
-            break
-        idx += 1
-    name_table.insert(insert_at, new_record)
-
-
 def _process_ttx_file(spec, filepath, value, string_override, dry_run, empty_fields_only):
     """Process TTX (XML) file to replace the nameID record."""
     nid = spec.name_id
@@ -164,7 +143,7 @@ def _process_ttx_file(spec, filepath, value, string_override, dry_run, empty_fie
             new_record.set("platEncID", "1")
             new_record.set("langID", "0x409")
             new_record.text = f"\n      {new_name}\n    "
-            _insert_namerecord_in_order(name_table, new_record)
+            insert_namerecord_in_order(name_table, new_record)
             file_changed = True
             show_created(nid, filepath, new_name, dry_run, console)
 
@@ -254,43 +233,9 @@ def _process_binary_font(spec, filepath, value, string_override, dry_run, empty_
 
 def _preprocess_explicit_syntax(spec, argv):
     """Convert --idN:flag=value syntax to standard flags."""
-    id_num = spec.name_id
-    pattern = f"--id{id_num}:"
-    if not any(pattern in arg for arg in argv):
-        return argv
-
     flag_map = {alias: spec.short_flag for alias in spec.explicit_aliases}
     flag_map.update({"string": "-str", "str": "-str"})
-
-    processed = [argv[0]]
-    i = 1
-    while i < len(argv):
-        arg = argv[i]
-        if arg.startswith(pattern):
-            match = re.match(f"--id{id_num}:(.+)", arg)
-            if match:
-                flag_part = match.group(1)
-                if "=" in flag_part:
-                    flag_name, value = flag_part.split("=", 1)
-                    value = value.strip('"').strip("'")
-                else:
-                    flag_name = flag_part
-                    if i + 1 < len(argv) and not argv[i + 1].startswith("-"):
-                        value = argv[i + 1]
-                        i += 1
-                    else:
-                        value = None
-
-                normalized = flag_name.lower().replace("-", "_")
-                std_flag = flag_map.get(normalized) or flag_map.get(flag_name.lower())
-                if std_flag and value:
-                    processed.extend([std_flag, value])
-                elif std_flag:
-                    processed.append(std_flag)
-        else:
-            processed.append(arg)
-        i += 1
-    return processed
+    return preprocess_explicit_syntax(argv, spec.name_id, flag_map)
 
 
 def make_replacer(name_id: int) -> SimpleNamespace:

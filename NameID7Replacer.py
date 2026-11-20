@@ -66,6 +66,11 @@ from FontCore.core_ttx_table_io import (
 # Get the themed console singleton
 console = cs.get_console()
 
+from nameid_common import (
+    insert_namerecord_in_order as _insert_namerecord_in_order,
+    preprocess_explicit_syntax,
+)
+
 # Optional better XML parser that preserves comments/whitespace
 try:
     from lxml import etree as LET
@@ -74,28 +79,6 @@ try:
 except ImportError:
     LXML_AVAILABLE = False
     LET = None  # Prevents unused import warning
-
-
-def _insert_namerecord_in_order(name_table, new_record) -> None:
-    try:
-        target_id = int(new_record.get("nameID"))
-    except Exception:
-        target_id = 999999
-    insert_at = len(list(name_table))
-    idx = 0
-    for child in list(name_table):
-        if child.tag != "namerecord":
-            idx += 1
-            continue
-        try:
-            child_id = int(child.get("nameID", "999999"))
-        except Exception:
-            child_id = 999999
-        if child_id > target_id:
-            insert_at = idx
-            break
-        idx += 1
-    name_table.insert(insert_at, new_record)
 
 
 def process_ttx_file(
@@ -402,50 +385,7 @@ SCRIPT_FLAG_MAP = {
 
 
 def _preprocess_explicit_syntax(argv, id_num):
-    """Convert --idN:flag=value syntax to standard flags."""
-    import re
-
-    pattern = f"--id{id_num}:"
-    if not any(pattern in arg for arg in argv):
-        return argv
-
-    processed = [argv[0]]
-    i = 1
-
-    while i < len(argv):
-        arg = argv[i]
-
-        if arg.startswith(pattern):
-            match = re.match(f"--id{id_num}:(.+)", arg)
-            if match:
-                flag_part = match.group(1)
-
-                if "=" in flag_part:
-                    flag_name, value = flag_part.split("=", 1)
-                    value = value.strip('"').strip("'")
-                else:
-                    flag_name = flag_part
-                    if i + 1 < len(argv) and not argv[i + 1].startswith("-"):
-                        value = argv[i + 1]
-                        i += 1
-                    else:
-                        value = None
-
-                normalized = flag_name.lower().replace("-", "_")
-                std_flag = SCRIPT_FLAG_MAP.get(normalized) or SCRIPT_FLAG_MAP.get(
-                    flag_name.lower()
-                )
-
-                if std_flag and value:
-                    processed.extend([std_flag, value])
-                elif std_flag:
-                    processed.append(std_flag)
-        else:
-            processed.append(arg)
-
-        i += 1
-
-    return processed
+    return preprocess_explicit_syntax(argv, id_num, SCRIPT_FLAG_MAP)
 
 
 def main():
