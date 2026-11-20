@@ -21,7 +21,7 @@ No Enhanced/base pairs. No dead one-shots. BatchRunner capability discovery mean
 
 ## Product-pass refinements (deferred)
 
-1. **Consolidate thin string IDs** — IDs 8–14 (and similar) are near-template CLIs (~480 lines each). A single `NameID_StringReplacer --id N` plus keep specialized 0/1/2/3/4/6/7/16/17 would shrink the surface without losing BatchRunner if discovery is updated.
+1. ~~**Consolidate thin string IDs**~~ **Done 2026-11-20:** IDs 8–14 now share `nameid_string_core.py` (a one-row-per-ID `SPECS` table); `NameID{8..14}Replacer.py` are ~28-line wrappers that keep the entry points, the per-ID value flag guard, and the names BatchRunner/CatalogApply import. Original note: — IDs 8–14 (and similar) are near-template CLIs (~480 lines each). A single `NameID_StringReplacer --id N` plus keep specialized 0/1/2/3/4/6/7/16/17 would shrink the surface without losing BatchRunner if discovery is updated.
 2. **Shared logic** — Much already in FontCore (`core_nameid_replacer_base`, name policies). Product pass: ensure per-file scripts stay thin wrappers.
 3. **CatalogApply vs FontExtractor2 auto-stamp** — README already documents overlap; product pitch should say when to use which (in-place / derived 0+7 / non-extractor fonts).
 4. **Audit as first-class** — Promote Audit in packaging (console script) alongside BatchRunner.

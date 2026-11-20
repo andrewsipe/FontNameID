@@ -192,3 +192,25 @@ def test_ttx_dry_run_changes_nothing(nid, tmp_path):
     before = ttx.read_bytes()
     assert _run(nid, SPECS[nid], "Dry", "-n", target=ttx).returncode == 0
     assert ttx.read_bytes() == before
+
+
+def test_batch_runner_discovers_each_replacer_with_its_own_flag():
+    """BatchRunner reads name_id / description / supported_flags from each wrapper."""
+    sys.path.insert(0, str(ROOT))
+    import NameID_BatchRunner as batch
+
+    expected = {
+        8: ("Manufacturer", "manufacturer"),
+        9: ("Designer", "designer"),
+        10: ("Description", "description"),
+        11: ("Vendor URL", "vendor_url"),
+        12: ("Designer URL", "designer_url"),
+        13: ("License Description", "license"),
+        14: ("License URL", "license_url"),
+    }
+    for nid, (description, flag) in expected.items():
+        cap = batch.SCRIPT_CAPABILITIES[nid]
+        assert cap["name_id"] == nid
+        assert cap["description"] == description
+        assert cap["supported_flags"] == {flag, "string", "empty_fields_only"}
+        assert callable(cap["process_files"])
