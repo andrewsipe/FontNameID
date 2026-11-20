@@ -153,7 +153,7 @@ class ProcessingStats:
 
 def show_workflow_header(title: str, name_id: int, description: str, console) -> None:
     """Display formatted header for NameID processing workflow"""
-    cs.fmt_header(f"{title} - Processing nameID={name_id} records", console)
+    cs.fmt_header(f"{description} (nameID {name_id})", console)
     cs.emit("", console=console)
 
 
@@ -167,7 +167,7 @@ def show_file_list(font_files: list, console) -> None:
 
 
 def show_preflight_checklist(
-    script_name: str, operations: list, console, active_flags: list = None
+    script_name: Optional[str], operations: list, console, active_flags: list = None
 ) -> None:
     """Display preflight checklist with operations that will be performed"""
     if active_flags:
@@ -583,21 +583,21 @@ def run_workflow(
 
     if delete_mac_records:
         active_flags.append(
-            "-dmr, --delete-mac-records : Remove all Mac name records (platformID=1) before processing"
+            "-dmr, --delete-mac-records : remove all Mac name records (platform 1) before processing"
         )
 
     if getattr(script_args, "empty_fields_only", False):
         active_flags.append(
-            "--empty-fields-only : Only fill blank Windows English name entries; do not overwrite existing text"
+            "--empty-fields-only : fill only the blank Windows English name records; leave existing text alone"
         )
 
     # Add Mac record removal to operations if requested
     if delete_mac_records:
-        operations.append("Mac name records will be removed (platformID=1)")
+        operations.append("Mac name records will be removed")
 
     # Show preflight checklist
     show_preflight_checklist(
-        f"NameID {name_id} Replacer", operations, console, active_flags
+        None, operations, console, active_flags
     )
 
     # Check for Mac records

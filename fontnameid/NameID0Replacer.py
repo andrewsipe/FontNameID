@@ -520,7 +520,7 @@ def process_files(file_paths, script_args, batch_context=False):
         process_file_fn=process_file_wrapper,
         title="Name ID 0 Replacer",
         name_id=0,
-        description="Processing nameID=0 records",
+        description="Copyright",
         operations=operations,
         batch_context=batch_context,
     )

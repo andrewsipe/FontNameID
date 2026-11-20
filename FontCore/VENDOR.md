@@ -3,7 +3,7 @@
 fontnameid ships a minimal copy of [FontCore](https://github.com/andrewsipe/FontCore)
 so it installs without the full library, a submodule, or a symlink.
 
-**Source:** FontCore 0.2.2 (`v0.2.2`)
+**Source:** FontCore 0.2.3 (`v0.2.3`)
 
 **Do not edit these files here.** Fix them in FontCore, then re-sync.
 

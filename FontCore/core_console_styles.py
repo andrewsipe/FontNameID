@@ -847,26 +847,29 @@ class StatusIndicator:
 # Convenience functions that use StatusIndicator internally for common patterns
 
 
-def fmt_preflight_checklist(script_name: str, operations: list, console=None) -> None:
+def fmt_preflight_checklist(
+    script_name: Optional[str], operations: list, console=None
+) -> None:
     """
     Display a standardized pre-flight checklist showing what the script will do.
 
     Args:
-        script_name: Name of the script (e.g., "NameID 1 Replacer")
+        script_name: Name of the task (e.g., "Catalog Metadata Apply"); None to leave the line out
         operations: List of operation descriptions
         console: Optional console instance
 
     Example:
-        >>> fmt_preflight_checklist("NameID 1 Replacer", ["Replace nameID 1", "Update family names"])
-        # Displays formatted checklist with script name and operations
+        >>> fmt_preflight_checklist("Catalog Metadata Apply", ["Fill nameID 8, 9, 10"])
+        # Displays the plan: an optional task line and the numbered steps
     """
     if console is None:
         console = get_console()
 
     emit("")
-    StatusIndicator("info").add_message("Pre-flight checklist:").emit(console)
-    emit(f"  Script: {script_name}", console=console)
-    emit("  Operations to perform:", console=console)
+    StatusIndicator("info").add_message("Before starting:").emit(console)
+    if script_name:
+        emit(f"  Task: {script_name}", console=console)
+    emit("  This will:", console=console)
     for i, operation in enumerate(operations, 1):
         emit(f"    {i}. {operation}", console=console)
 
@@ -951,12 +954,12 @@ def fmt_deletion_operation(
     if name_ids:
         parts.append(f"nameID {', '.join(map(str, sorted(name_ids)))}")
     if mac_records:
-        parts.append("Macintosh records (platformID=1)")
+        parts.append("Mac name records (platform 1)")
     if fontsquirrel:
         parts.append("FontSquirrel records (nameIDs: 200,201,202,203,55555)")
     if windows_english_only:
         parts.append(
-            "non-Windows/English/Latin records (keep only platformID=3, platEncID=1, langID=0x409)"
+            "every name record except Windows English (platform 3, encoding 1, language 0x409)"
         )
 
     return f"Delete {', '.join(parts)}"

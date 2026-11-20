@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.3] - 2026-11-20
+
+### Changed
+- Wording before and during a run (FontCore 0.2.3): the header names the record (`Manufacturer (nameID 8)`); the plan reads
+  `Before starting:` / `This will:`; Mac records are always "Mac name records", without platform numbers in status lines;
+  the Windows-English delete summary says what is kept.
+
 ## [0.2.2] - 2026-11-20
 
 ### Fixed

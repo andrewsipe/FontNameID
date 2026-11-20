@@ -627,7 +627,7 @@ def process_files(file_paths, script_args, batch_context=False):
         process_file_fn=process_file_wrapper,
         title="Name ID 2 Replacer",
         name_id=2,
-        description="Processing nameID=2 records",
+        description="Font Subfamily",
         operations=operations,
         batch_context=batch_context,
     )
