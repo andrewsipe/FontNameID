@@ -271,7 +271,7 @@ class ErrorInfo:
             parts.append(f"Additional Info: {self.additional_info}")
 
         if not self.recoverable:
-            parts.append("Recoverable: NO")
+            parts.append("Recoverable: no")
 
         return " | ".join(parts)
 

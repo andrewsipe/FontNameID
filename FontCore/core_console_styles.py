@@ -301,6 +301,22 @@ def fmt_count(value: int | str) -> str:
     return f"[count]{value}[/count]" if RICH_AVAILABLE else str(value)
 
 
+def fmt_plural(count: int, singular: str, plural: Optional[str] = None) -> str:
+    """
+    A count with its noun, so messages read "1 file" and "3 files" instead of "file(s)".
+
+    The number is emphasized like fmt_count. Pass `plural` for irregular nouns.
+
+    Example:
+        >>> fmt_plural(1, "file")
+        "1 file"
+        >>> fmt_plural(3, "Mac name record")
+        "3 Mac name records"
+    """
+    word = singular if count == 1 else (plural or f"{singular}s")
+    return f"{fmt_count(count)} {word}"
+
+
 def _escape_markup(text: str) -> str:
     """Keep brackets in a filename from being read as a Rich style tag."""
     if not RICH_AVAILABLE:
@@ -895,13 +911,13 @@ def fmt_processing_summary(
 
     Example:
         >>> fmt_processing_summary(dry_run=False, updated=35, unchanged=3, errors=2)
-        # Displays "Processing Completed! updated: 35 | unchanged: 3 | errors: 2"
+        # Displays "Finished updated: 35 | unchanged: 3 | errors: 2"
     """
     if console is None:
         console = get_console()
 
     emit("")
-    label = "Preview" if dry_run else "Processing Completed!"
+    label = "Preview" if dry_run else "Finished"
     StatusIndicator("success", dry_run=dry_run).add_message(label).with_summary_block(
         updated=updated,
         unchanged=unchanged,

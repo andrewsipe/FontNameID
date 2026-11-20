@@ -160,7 +160,7 @@ def show_workflow_header(title: str, name_id: int, description: str, console) ->
 def show_file_list(font_files: list, console) -> None:
     """Display formatted list of files to be processed"""
     cs.StatusIndicator("info").add_message(
-        f"Found {cs.fmt_count(len(font_files))} font file(s) to process:"
+        f"Found {cs.fmt_plural(len(font_files), 'font file')}:"
     ).emit(console=console)
     for file in font_files:
         cs.emit(f"  - {cs.fmt_file_compact(file)}", console=console)
@@ -173,7 +173,7 @@ def show_preflight_checklist(
     if active_flags:
         # Show active flags first
         cs.emit("", console=console)
-        cs.StatusIndicator("info").add_message("Active Flags:").emit(console=console)
+        cs.StatusIndicator("info").add_message("Options in use:").emit(console=console)
 
         for flag_info in active_flags:
             cs.emit(f"  {flag_info}", console=console)
@@ -213,14 +213,12 @@ def check_and_show_mac_records(
         cs.emit("", console=console)
         if delete_mac_records:
             cs.StatusIndicator("info").add_message(
-                f"Found {cs.fmt_count(total_mac_records)} Mac name record(s) in {cs.fmt_count(len(files_with_mac))} file(s) - will be removed"
+                f"Found {cs.fmt_plural(total_mac_records, 'Mac name record')} in {cs.fmt_plural(len(files_with_mac), 'file')} - will be removed"
             ).emit(console)
         else:
             cs.StatusIndicator("warning").add_message(
-                f"[warning]Macintosh name records detected in {cs.fmt_count(len(files_with_mac))} file(s)[/warning]"
-            ).add_item(f"{cs.fmt_count(total_mac_records)} total records").add_item(
-                "Use -dmr to remove them before processing for cleaner results"
-            ).emit(console)
+                f"[warning]Found {cs.fmt_plural(total_mac_records, 'Mac name record')} in {cs.fmt_plural(len(files_with_mac), 'file')}[/warning]"
+            ).add_item("Use -dmr to remove them before processing.").emit(console)
         cs.emit("", console=console)
 
 
@@ -297,7 +295,7 @@ def prompt_confirmation(
     Raises cs.QuitRequested if batch_context=True and user quits."""
     if not dry_run:
         if not cs.prompt_confirm(
-            f"About to modify {cs.fmt_count(file_count)} file(s). Proceed?",
+            f"About to modify {cs.fmt_plural(file_count, 'file')}.",
             allow_quit=batch_context,
         ):
             if batch_context:
@@ -457,7 +455,7 @@ def show_compound_modifier_warning(
     cs.StatusIndicator("warning", dry_run=dry_run).add_file(
         filepath, filename_only=True
     ).add_item(
-        f"[warning]Compound modifier(s) detected:[/warning][bold] {', '.join(modifiers)}[/bold]"
+        f"[warning]Compound {'modifier' if len(modifiers) == 1 else 'modifiers'} detected:[/warning][bold] {', '.join(modifiers)}[/bold]"
     ).add_item(
         f'[warning]Filename parsed as:[/warning][bold] "{instances[0]["parsed_as"]}"[/bold]'
     ).add_item(
@@ -549,7 +547,7 @@ def run_workflow(
     recursive = getattr(script_args, "recursive", False)
     font_files = collect_font_files(file_paths, recursive)
     if not font_files:
-        cs.StatusIndicator("error").add_message("No font files found to process.").emit(
+        cs.StatusIndicator("error").add_message("No font files found.").emit(
             console=console
         )
         stats.errors = 1
@@ -633,27 +631,27 @@ def run_workflow(
                     cs.StatusIndicator("preview").add_file(
                         file, filename_only=True
                     ).add_message(
-                        f"Would remove {cs.fmt_count(removed_count)} Mac record(s)"
+                        f"Would remove {cs.fmt_plural(removed_count, 'Mac name record')}"
                     ).emit(console=console)
                 else:
                     cs.StatusIndicator("updated").add_file(
                         file, filename_only=True
                     ).add_message(
-                        f"Removed {cs.fmt_count(removed_count)} Mac record(s)"
+                        f"Removed {cs.fmt_plural(removed_count, 'Mac name record')}"
                     ).emit(console=console)
 
         if total_removed > 0:
             if script_args.dry_run:
                 cs.StatusIndicator("info").add_message(
-                    f"Would remove {cs.fmt_count(total_removed)} Mac record(s) total"
+                    f"Would remove {cs.fmt_plural(total_removed, 'Mac name record')} in total"
                 ).emit(console=console)
             else:
                 cs.StatusIndicator("info").add_message(
-                    f"Removed {cs.fmt_count(total_removed)} Mac record(s) total"
+                    f"Removed {cs.fmt_plural(total_removed, 'Mac name record')} in total"
                 ).emit(console=console)
         else:
             cs.StatusIndicator("info").add_message(
-                "No Mac records found to remove"
+                "No Mac name records found to remove"
             ).emit(console=console)
 
         cs.emit("", console=console)
