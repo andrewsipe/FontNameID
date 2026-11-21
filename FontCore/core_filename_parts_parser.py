@@ -147,6 +147,8 @@ import re
 from dataclasses import dataclass
 from typing import List, Tuple
 
+from FontCore.core_font_style_dictionaries import join_style_compounds
+
 
 # PascalCase tokenization pattern components:
 # 1. Acronym runs before CamelCase: "XMLHttp" -> "XML", "Http"
@@ -498,6 +500,7 @@ def split_family_subfamily(
     - Split at the first hyphen only
     - Family is the left side, Subfamily is the right side (or empty if no hyphen)
     - Each side is converted to space-separated words respecting acronym rules
+    - Compound style words in the subfamily are joined (Semi Bold -> Semibold; Semi Condensed -> SemiCondensed)
 
     Returns a tuple: (family, subfamily)
     """
@@ -505,7 +508,7 @@ def split_family_subfamily(
     left, right = _split_at_hyphen(base)
 
     family = format_pascal_words(left)
-    subfamily = format_pascal_words(right) if right else ""
+    subfamily = join_style_compounds(format_pascal_words(right)) if right else ""
 
     return family, subfamily
 
@@ -550,7 +553,7 @@ def parse_filename(input_name: str, *, strip_extension: bool = True) -> ParsedNa
         family_raw=left,
         subfamily_raw=right,
         family=format_pascal_words(left),
-        subfamily=format_pascal_words(right) if right else "",
+        subfamily=join_style_compounds(format_pascal_words(right)) if right else "",
     )
 
 

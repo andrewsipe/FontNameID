@@ -6,6 +6,9 @@ Philosophy: Minimal dictionaries for deterministic outcomes and ambiguity resolu
 Pattern matching handles variations programmatically.
 """
 
+import re
+
+
 # ================================================================================================
 # 1. COMPOUND NORMALIZATIONS (~30 entries)
 # ================================================================================================
@@ -252,6 +255,10 @@ ELIDABLE_VF_FILENAME_SLOPES: frozenset[str] = frozenset({"Upright", "Roman"})
 
 MODIFIERS = {"Semi", "Demi", "Extra", "Ultra", "Super"}
 
+# Weight words that take a modifier (Semi + Bold, Extra + Light, ...). House style: weight compounds are
+# one word (Semibold, Extralight), and width compounds are joined with their capitals (SemiCondensed).
+WEIGHT_BASES = {"Hairline", "Thin", "Light", "Medium", "Bold", "Black", "Heavy"}
+
 # Terms that suggest elidable=True when used as a weight name (STAT AxisValue names)
 ELIDABLE_WEIGHT_NAMES: frozenset[str] = frozenset(
     {
@@ -372,6 +379,51 @@ def generate_all_optical_variations() -> set[str]:
     Returns base optical terms (no modifiers typically used with optical sizes).
     """
     return set(OPTICAL_BASES)
+
+
+def join_style_compounds(text: str) -> str:
+    """Join the pieces of compound style words that PascalCase splitting pulled apart.
+
+    - modifier + weight is one word, second part lowercase: "Semi Bold" -> "Semibold",
+      "Extra Light" -> "Extralight"
+    - modifier + width (or X-run + width) is joined with capitals kept: "Semi Condensed" ->
+      "SemiCondensed", "XX Condensed" -> "XXCondensed"
+    - "Small Caps" -> "Smallcaps" (the one exception to keeping capitals)
+
+    Everything else is left alone, so the function is safe to run twice. Apply it to a style
+    (subfamily) string, not to a family name.
+    """
+    if not text:
+        return text
+    tokens = text.split()
+    out = []
+    i = 0
+    modifiers = {m.lower() for m in MODIFIERS}
+    weights = {w.lower() for w in WEIGHT_BASES}
+    widths = {w.lower() for w in WIDTH_BASES}
+    while i < len(tokens):
+        token = tokens[i]
+        nxt = tokens[i + 1] if i + 1 < len(tokens) else None
+        if nxt is not None:
+            low, nxt_low = token.lower(), nxt.lower()
+            is_modifier = low in modifiers
+            is_x_run = bool(re.fullmatch(r"X{1,7}", token))
+            if is_modifier and nxt_low in weights:
+                out.append(token.capitalize() + nxt_low)
+                i += 2
+                continue
+            if (is_modifier or is_x_run) and nxt_low in widths:
+                first = token if is_x_run else token.capitalize()
+                out.append(first + nxt.capitalize())
+                i += 2
+                continue
+            if low == "small" and nxt_low == "caps":
+                out.append("Smallcaps")
+                i += 2
+                continue
+        out.append(token)
+        i += 1
+    return " ".join(out)
 
 
 # Cache generated variations at module load time
