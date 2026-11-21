@@ -23,7 +23,6 @@ from FontCore.core_filename_parts_parser import parse_filename
 from FontCore.core_name_policies import (
     build_id1,
     normalize_style_and_slope_for_id1_id4,
-    get_regular_equivalent_for_families,
     sync_cff_names_binary,
     normalize_nfc,
     detect_compound_modifier_patterns,
@@ -530,16 +529,10 @@ def process_files(file_paths, script_args, batch_context=False):
 
         # Apply name policies for ID1 (same as original version)
         if not args.string:
-            # Get family-level regular equivalent when filename parser is enabled
-            regular_equiv = None
-            if hasattr(process_file_wrapper, "family_regular_map") and fp_family:
-                regular_equiv = process_file_wrapper.family_regular_map.get(fp_family)
-
             # Normalize style and slope according to ID1 policy
             norm_style, norm_slope = normalize_style_and_slope_for_id1_id4(
                 use_style,
                 args.slope,
-                regular_equivalent=regular_equiv,
             )
 
             # ID1 policy: never include slope; always drop Bold token from style
@@ -591,17 +584,6 @@ def process_files(file_paths, script_args, batch_context=False):
             empty_fields_only=getattr(args, "empty_fields_only", False),
             error_tracker=error_tracker,
         )
-
-    # Build family regular map if filename parser is enabled
-    if script_args.filename_parser is not None:
-        font_files = collect_font_files(
-            file_paths, getattr(script_args, "recursive", False)
-        )
-        process_file_wrapper.family_regular_map = get_regular_equivalent_for_families(
-            font_files
-        )
-    else:
-        process_file_wrapper.family_regular_map = {}
 
     result = run_workflow(
         file_paths=file_paths,

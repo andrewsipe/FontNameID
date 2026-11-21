@@ -10,8 +10,8 @@ Examples:
 - Build copyright + trademark from existing nameIDs (ID 8/9 holder, ID 16 family):
   python3 NameIDBatchRunner.py --ids 0,7 --yes -- /path/to/fonts -R
 
-- Run ID1 + ID4 only, conservative Book/Normal handling, non-interactive:
-  python3 NameIDBatchRunner.py --ids 1,4 --regular-synonyms conservative --yes -- \
+- Run ID1 + ID4 only, non-interactive:
+  fontnameid batch --ids 1,4 --yes -- \
     "/path/A.ttf"
 
 Notes:

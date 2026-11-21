@@ -60,74 +60,10 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
-DEFAULT_REGULAR_SYNONYMS_MODE = "regular_only"
-
 # Slopes elided from variable-font display names (ID4) and ID17
 ELIDABLE_VF_DISPLAY_SLOPES: frozenset[str] = frozenset(
     {"Regular", "Roman", "Normal", "Plain", "Standard", "Upright"}
 ) | ELIDABLE_VF_FILENAME_SLOPES
-
-# Canonical list of valid regular-equivalent terms
-VALID_REGULAR_EQUIVALENTS = frozenset(
-    [
-        "Regular",
-        "Roman",
-        "Plain",
-        "Normal",
-        "Standard",
-        "Book",
-        "Text",
-        "Medium",
-        "Light",
-    ]
-)
-
-
-class RegularEquivalentError(ValueError):
-    """Raised when an invalid regular_equivalent value is provided."""
-
-    pass
-
-
-def validate_regular_equivalent(
-    value: str | None, *, strict: bool = False
-) -> str | None:
-    """
-    Validate regular_equivalent parameter.
-
-    Args:
-        value: The regular_equivalent value to validate
-        strict: If True, raise exception on invalid values.
-                If False, log warning and return None.
-
-    Returns:
-        Validated value or None if invalid
-
-    Raises:
-        RegularEquivalentError: If strict=True and value is invalid
-    """
-    normalized = normalize_empty(value)
-
-    # None or empty is always valid
-    if normalized is None:
-        return None
-
-    # Check against valid list (case-insensitive)
-    if normalized.title() not in VALID_REGULAR_EQUIVALENTS:
-        valid_list = ", ".join(sorted(VALID_REGULAR_EQUIVALENTS))
-        error_msg = (
-            f"Invalid regular_equivalent '{normalized}'. Must be one of: {valid_list}"
-        )
-
-        if strict:
-            raise RegularEquivalentError(error_msg)
-        else:
-            logger.warning(f"{error_msg}. Ignoring this parameter.")
-            return None
-
-    # Return title-cased version for consistency
-    return normalized.title()
-
 
 def normalize_nfc(value: str | None) -> str | None:
     """Return Unicode NFC-normalized string; pass through None."""
@@ -186,7 +122,7 @@ def detect_compound_modifier_patterns(
     return len(instances) > 0, instances
 
 
-RE_REGULAR = re.compile(r"\b(Regular|Roman)\b", re.I)
+RE_REGULAR = re.compile(r"\bRegular\b", re.I)
 RE_REVERSE_ITALIC = re.compile(r"\bReverse\s+Italic\b", re.I)
 RE_REVERSE_SLANTED = re.compile(r"\bReverse\s+Slanted\b", re.I)
 RE_ITALIC = re.compile(r"\bItalic\b", re.I)
@@ -199,8 +135,6 @@ RE_INCLINED = re.compile(r"\bInclined\b", re.I)
 RE_RETALIC = re.compile(r"\bRetalic\b", re.I)
 RE_REVERSE = re.compile(r"\bReverse\b", re.I)
 RE_CURSIVE = re.compile(r"\b(Cursive|Kursiv)\b", re.I)
-RE_BOOK = re.compile(r"\bBook\b", re.I)
-RE_NORMAL = re.compile(r"\bNormal\b", re.I)
 RE_VARIABLE_TOKENS = re.compile(r"\b(Variable|VF|GX|Flex)\b", re.I)
 
 # (pattern, canonical slope label) — compound / longer forms first
@@ -235,52 +169,17 @@ def _extract_slope_from_style(style: str) -> tuple[str, str | None]:
     return style, None
 
 
-def _apply_regular_synonym_mode(
-    style: str, mode: str, drop_book: bool | None, drop_normal: bool | None
-) -> str:
-    """Apply Book/Normal stripping based on mode and explicit flags."""
-    # Explicit flags take precedence
-    if drop_book is True:
-        style, _ = _strip_token(RE_BOOK, style)
-    if drop_normal is True:
-        style, _ = _strip_token(RE_NORMAL, style)
-
-    # Apply mode if no explicit flags
-    if drop_book is None and drop_normal is None:
-        mode_lower = (mode or DEFAULT_REGULAR_SYNONYMS_MODE).lower()
-
-        if mode_lower == "loose":
-            style, _ = _strip_token(RE_BOOK, style)
-            style, _ = _strip_token(RE_NORMAL, style)
-        elif mode_lower == "conservative":
-            candidate = style.strip().lower()
-            if candidate in {"book", "normal"}:
-                style, _ = _strip_token(RE_BOOK, style)
-                style, _ = _strip_token(RE_NORMAL, style)
-
-    return style
-
-
 def normalize_style_and_slope_for_id1_id4(
     subfamily_style: str | None,
     slope: str | None,
-    *,
-    regular_synonyms_mode: str = DEFAULT_REGULAR_SYNONYMS_MODE,
-    drop_book: bool | None = None,
-    drop_normal: bool | None = None,
-    regular_equivalent: str | None = None,
 ) -> tuple[str | None, str | None]:
     """Normalize a style string for ID1/ID4 policy.
 
-    - Remove Regular/Roman from style
-    - If regular_equivalent is provided, also remove that term
+    - Remove Regular (the RIBBI word). Roman, Book, Normal, Plain, Medium, Light and Text are
+      ordinary style words and stay.
     - If Italic/Oblique/Slanted appear in style, move them into slope when slope is not set
     - Idempotent: can be executed repeatedly safely
     """
-    # Validate regular_equivalent
-    regular_equivalent = validate_regular_equivalent(regular_equivalent, strict=False)
-
-    # Normalize inputs
     subfamily_style = normalize_empty(subfamily_style)
     slope = normalize_empty(slope)
 
@@ -290,11 +189,6 @@ def normalize_style_and_slope_for_id1_id4(
     style = subfamily_style
     style, _ = _strip_token(RE_REGULAR, style)
 
-    # Strip regular-equivalent term if provided and valid
-    if regular_equivalent and regular_equivalent.lower() != "regular":
-        equiv_pattern = re.compile(rf"\b{re.escape(regular_equivalent)}\b", re.I)
-        style, _ = _strip_token(equiv_pattern, style)
-
     # Extract and remove slope terms if slope not already set
     slope_norm = slope
     if is_empty(slope_norm):
@@ -303,11 +197,6 @@ def normalize_style_and_slope_for_id1_id4(
     else:
         # Slope already set, just remove slope terms from style
         style, _ = _extract_slope_from_style(style)
-
-    # Apply Book/Normal handling
-    style = _apply_regular_synonym_mode(
-        style, regular_synonyms_mode, drop_book, drop_normal
-    )
 
     style = " ".join(style.split())
     return normalize_empty(style), slope_norm
@@ -514,15 +403,10 @@ def build_id1(
     variable_family_override: str | None = None,
     variable_slots: "VariableFilenameSlots | None" = None,
     use_filename_normalization: bool = True,
-    regular_synonyms_mode: str = DEFAULT_REGULAR_SYNONYMS_MODE,
-    regular_equivalent: str | None = None,
 ) -> str:
     """Construct ID1 (Family) string with policy."""
     if variable_slots is not None:
         return build_id1_from_variable_slots(variable_slots)
-
-    # Validate regular_equivalent
-    regular_equivalent = validate_regular_equivalent(regular_equivalent, strict=False)
 
     # Variable font policy: Strip "Variable" tokens from family name
     if is_variable:
@@ -539,8 +423,6 @@ def build_id1(
         style_eff, slope_eff = normalize_style_and_slope_for_id1_id4(
             style_eff,
             slope_eff,
-            regular_synonyms_mode=regular_synonyms_mode,
-            regular_equivalent=regular_equivalent,
         )
 
     # ID1: omit slope if it's "Italic"
@@ -565,8 +447,6 @@ def build_id4(
     prefix_from_filename: str | None = None,
     suffix_from_filename: str | None = None,
     use_filename_normalization: bool = True,
-    regular_synonyms_mode: str = DEFAULT_REGULAR_SYNONYMS_MODE,
-    regular_equivalent: str | None = None,
 ) -> str:
     """Construct ID4 (Full) string with policy."""
     if variable_slots is not None:
@@ -600,8 +480,6 @@ def build_id4(
         style_eff, slope_eff = normalize_style_and_slope_for_id1_id4(
             style_eff,
             slope_eff,
-            regular_synonyms_mode=regular_synonyms_mode,
-            regular_equivalent=regular_equivalent,
         )
 
     # Asterisks are preserved in ID4 (no sanitization needed)
@@ -666,8 +544,6 @@ __all__ = [
     # Family-level Regular-equivalent detection
     "REGULAR_FALLBACK_PRIORITY",
     "group_fonts_by_family_filename",
-    "identify_family_regular_equivalent",
-    "get_regular_equivalent_for_families",
     # Variable helpers
     "is_elidable_vf_slope",
     "build_id1_from_variable_slots",
@@ -845,279 +721,6 @@ def format_version_number(value: Any) -> str:
 
 def build_id5_version_string(version: str | float) -> str:
     return f"Version {format_version_number(version)}"
-
-
-# ---------- Family-level Regular-equivalent detection ----------
-
-REGULAR_FALLBACK_PRIORITY = [
-    "Roman",
-    "Plain",
-    "Normal",
-    "Book",
-    "Text",
-    "Medium",
-    "Light",
-]
-
-
-def group_fonts_by_family_filename(font_paths: list[str]) -> dict[str, list[str]]:
-    """Group font file paths by family name extracted from filename."""
-    try:
-        from FontCore.core_filename_parts_parser import parse_filename
-    except ImportError:
-        return _group_fonts_fallback(font_paths)
-
-    families: dict[str, list[str]] = {}
-    for path in font_paths:
-        parsed = parse_filename(path, strip_extension=True)
-        fam = parsed.family if parsed.family else "Unknown"
-        families.setdefault(fam, []).append(path)
-    return families
-
-
-def _group_fonts_fallback(font_paths: list[str]) -> dict[str, list[str]]:
-    """Fallback grouping when parser not available."""
-    import os
-
-    families: dict[str, list[str]] = {}
-    for path in font_paths:
-        base = os.path.basename(path)
-        base_no_ext = os.path.splitext(base)[0]
-        fam = base_no_ext.split("-", 1)[0] if "-" in base_no_ext else base_no_ext
-        families.setdefault(fam, []).append(path)
-    return families
-
-
-def _extract_weight_term_from_subfamily(subfamily: str) -> str | None:
-    """Extract first recognized weight term from subfamily string."""
-    if not subfamily:
-        return None
-
-    sub_lower = subfamily.lower()
-
-    for term in REGULAR_FALLBACK_PRIORITY:
-        if term.lower() in sub_lower:
-            return term
-
-    if "regular" in sub_lower:
-        return "Regular"
-
-    return None
-
-
-def _check_text_standalone(subfamily: str) -> bool:
-    """Check if 'Text' appears as a standalone optical size, not with weight terms."""
-    if not subfamily or "text" not in subfamily.lower():
-        return False
-
-    sub_lower = subfamily.lower()
-
-    # Exclude if combined with weight terms
-    weight_disqualifiers = [
-        "bold",
-        "book",
-        "normal",
-        "medium",
-        "black",
-        "heavy",
-        "extra",
-        "semi",
-        "demi",
-    ]
-    if any(w in sub_lower for w in weight_disqualifiers):
-        return False
-
-    # Remove slope tokens and see if we're left with just "text"
-    temp = sub_lower
-    temp = re.sub(r"\b(italic|oblique|slanted)\b", "", temp)
-    temp = re.sub(r"[^a-z]+", "", temp)
-
-    return temp == "text"
-
-
-def _get_usweightclass_from_font(font_path: str) -> int | None:
-    """Read usWeightClass from a font file without full table loading."""
-    try:
-        from fontTools.ttLib import TTFont
-
-        font = TTFont(font_path, lazy=True)
-        if "OS/2" in font:
-            weight = font["OS/2"].usWeightClass
-            font.close()
-            return int(weight)
-        else:
-            logger.debug(f"Font '{font_path}' has no OS/2 table")
-    except Exception as e:
-        logger.warning(f"Failed to read usWeightClass from '{font_path}': {e}")
-    return None
-
-
-def _check_for_regular_in_filenames(family_paths: list[str]) -> bool:
-    """Check if any font in family has 'Regular' in filename."""
-    try:
-        from FontCore.core_filename_parts_parser import parse_filename
-    except ImportError:
-        return False
-
-    for path in family_paths:
-        parsed = parse_filename(path, strip_extension=True)
-        if parsed.subfamily and "regular" in parsed.subfamily.lower():
-            return True
-    return False
-
-
-def _find_closest_to_400_weight_term(family_paths: list[str]) -> str | None:
-    """Find regular-equivalent term by analyzing which term is closest to weight 400.
-
-    Logic:
-    1. For each recognized term (Roman, Plain, Normal, Book, etc.), find fonts with that term
-    2. Get average weight for that term across all width variants
-    3. Return term closest to 400
-    4. On ties, use priority order (REGULAR_FALLBACK_PRIORITY)
-    """
-    try:
-        from FontCore.core_filename_parts_parser import parse_filename
-    except ImportError:
-        return None
-
-    # Build term -> list of weights mapping
-    term_weights: Dict[str, List[int]] = {}
-
-    for path in family_paths:
-        weight = _get_usweightclass_from_font(path)
-        if weight is None:
-            continue
-
-        parsed = parse_filename(path, strip_extension=True)
-        if not parsed.subfamily:
-            continue
-
-        term = _extract_weight_term_from_subfamily(parsed.subfamily)
-        if term:
-            if term not in term_weights:
-                term_weights[term] = []
-            term_weights[term].append(weight)
-
-    if not term_weights:
-        return None
-
-    # Calculate average weight for each term
-    term_avg_weights: Dict[str, float] = {}
-    for term, weights in term_weights.items():
-        term_avg_weights[term] = sum(weights) / len(weights)
-
-    # Find term(s) closest to 400
-    closest_distance = float("inf")
-    closest_terms = []
-
-    for term, avg_weight in term_avg_weights.items():
-        distance = abs(avg_weight - 400)
-        if distance < closest_distance:
-            closest_distance = distance
-            closest_terms = [term]
-        elif distance == closest_distance:
-            closest_terms.append(term)
-
-    # If single winner, return it
-    if len(closest_terms) == 1:
-        logger.debug(
-            f"Found single closest term: {closest_terms[0]} (avg weight: {term_avg_weights[closest_terms[0]]:.1f}, distance: {closest_distance:.1f})"
-        )
-        return closest_terms[0]
-
-    # Multiple terms at same distance - use priority order
-    for candidate in REGULAR_FALLBACK_PRIORITY:
-        if candidate in closest_terms:
-            logger.debug(
-                f"Tie resolved by priority: {candidate} (avg weight: {term_avg_weights[candidate]:.1f}, distance: {closest_distance:.1f})"
-            )
-            return candidate
-
-    # Fallback to first term found
-    result = closest_terms[0] if closest_terms else None
-    if result:
-        logger.debug(
-            f"Fallback selection: {result} (avg weight: {term_avg_weights[result]:.1f}, distance: {closest_distance:.1f})"
-        )
-    return result
-
-
-def _find_term_from_filenames(family_paths: list[str]) -> str | None:
-    """Find fallback term from filenames by scanning in priority order."""
-    try:
-        from FontCore.core_filename_parts_parser import parse_filename
-    except ImportError:
-        return None
-
-    term_counts: dict[str, int] = {}
-    text_standalone_count = 0
-
-    for path in family_paths:
-        parsed = parse_filename(path, strip_extension=True)
-        if not parsed.subfamily:
-            continue
-
-        if _check_text_standalone(parsed.subfamily):
-            text_standalone_count += 1
-
-        term = _extract_weight_term_from_subfamily(parsed.subfamily)
-        if term:
-            term_counts[term] = term_counts.get(term, 0) + 1
-
-    # Return first term found in priority order
-    for candidate in REGULAR_FALLBACK_PRIORITY:
-        if candidate == "Text":
-            if text_standalone_count > 0:
-                return "Text"
-        elif candidate in term_counts:
-            return candidate
-
-    return None
-
-
-def identify_family_regular_equivalent(family_paths: list[str]) -> str | None:
-    """Identify which weight term acts as "Regular" for this font family.
-
-    Detection priority:
-    1. Check filenames for "Regular"
-    2. Check usWeightClass == 400 (must be exactly one match)
-    3. Check filenames for fallback terms in priority order
-    4. Special handling for "Text" (must be standalone optical size)
-    """
-    if not family_paths:
-        return None
-
-    logger.debug(f"Analyzing {len(family_paths)} fonts for regular equivalent")
-
-    # Step 1: Check for "Regular" in filenames
-    if _check_for_regular_in_filenames(family_paths):
-        logger.debug("Found 'Regular' in filenames")
-        return "Regular"
-
-    # Step 2: Find term closest to weight 400 across all variants
-    term = _find_closest_to_400_weight_term(family_paths)
-    if term:
-        logger.debug(f"Found closest-to-400 term: {term}")
-        return term
-
-    # Step 3: Check filenames for fallback terms
-    term = _find_term_from_filenames(family_paths)
-    if term:
-        logger.debug(f"Found fallback term in filenames: {term}")
-    else:
-        logger.info(
-            f"Could not determine regular equivalent for family with {len(family_paths)} fonts"
-        )
-    return term
-
-
-def get_regular_equivalent_for_families(font_paths: list[str]) -> dict[str, str | None]:
-    """Analyze font files and return per-family regular-equivalent mapping."""
-    families = group_fonts_by_family_filename(font_paths)
-    return {
-        fam: identify_family_regular_equivalent(paths)
-        for fam, paths in families.items()
-    }
 
 
 # ---------- Variable font helpers ----------
