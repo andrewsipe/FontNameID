@@ -114,3 +114,27 @@ def test_fsselection_and_macstyle_are_set_together_from_id2(tmp_path, stem, angl
     font = _prepare(tmp_path / f"{stem}.ttf", angle=angle)
     _run(font, ids=(2,))
     assert _flags(font) == expected_flags
+
+
+def _batch(directory: Path, ids: str = "1,2,4,16,17") -> None:
+    result = subprocess.run(
+        [sys.executable, "-m", "fontnameid", "batch", "--ids", ids, "-fp", "-y", "-r", "--", str(directory)],
+        capture_output=True, text=True, cwd=ROOT, timeout=300,
+    )
+    assert result.returncode == 0, result.stdout[-500:] + result.stderr[-500:]
+
+
+def test_batch_reads_the_filename_for_id2_and_is_idempotent(tmp_path):
+    """Found by the bench: batch passes -fp as an empty string, which replacer 2 read as 'off', so ID2 came from
+    stale flags on the first run and changed on the second."""
+    semibold = _prepare(tmp_path / "Kiwari-Semibold.ttf", weight=600, fs=FS_BOLD, mac=1)
+    bold = _prepare(tmp_path / "Kiwari-Bold.ttf", weight=700)
+    oblique = _prepare(tmp_path / "Kiwari-RegularOblique.ttf", angle=-10.0)
+    fonts = (semibold, bold, oblique)
+    _batch(tmp_path)
+    after_first = {f.name: f.read_bytes() for f in fonts}
+    assert _names_id2(semibold) == "Regular"
+    assert _names_id2(bold) == "Bold"
+    assert _names_id2(oblique) == "Italic"
+    _batch(tmp_path)
+    assert {f.name: f.read_bytes() for f in fonts} == after_first

@@ -634,7 +634,8 @@ def process_file_wrapper(filepath, args, dry_run=False, stats=None):
         args.string,
         dry_run,
         getattr(args, "empty_fields_only", False),
-        bool(getattr(args, "filename_parser", False)),
+        # -fp is True standalone and a string (possibly "") when batch passes it: only None/False mean off
+        getattr(args, "filename_parser", None) not in (None, False),
     )
 
 
