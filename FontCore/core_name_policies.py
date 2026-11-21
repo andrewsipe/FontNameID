@@ -45,6 +45,7 @@ from __future__ import annotations
 
 import re
 import unicodedata
+from dataclasses import dataclass
 from typing import Any, Optional, Dict, List, TYPE_CHECKING
 
 # New imports for enhanced functionality
@@ -123,87 +124,75 @@ def detect_compound_modifier_patterns(
     return len(instances) > 0, instances
 
 
-RE_REGULAR = re.compile(r"\bRegular\b", re.I)
-RE_REVERSE_ITALIC = re.compile(r"\bReverse\s+Italic\b", re.I)
-RE_REVERSE_SLANTED = re.compile(r"\bReverse\s+Slanted\b", re.I)
-RE_ITALIC = re.compile(r"\bItalic\b", re.I)
-RE_OBLIQUE = re.compile(r"\bOblique\b", re.I)
-RE_BACKSLANTED = re.compile(r"\bBack\s*Slanted\b|\bBackslanted\b", re.I)
-RE_BACKSLANT = re.compile(r"\bBackslant\b", re.I)
-RE_SLANTED = re.compile(r"\bSlanted\b", re.I)
-RE_SLANT = re.compile(r"\bSlant\b", re.I)
-RE_INCLINED = re.compile(r"\bInclined\b", re.I)
-RE_RETALIC = re.compile(r"\bRetalic\b", re.I)
-RE_REVERSE = re.compile(r"\bReverse\b", re.I)
-RE_CURSIVE = re.compile(r"\b(Cursive|Kursiv)\b", re.I)
 RE_VARIABLE_TOKENS = re.compile(r"\b(Variable|VF|GX|Flex)\b", re.I)
 
-# (pattern, canonical slope label) — compound / longer forms first
-_STYLE_SLOPE_EXTRACTORS: tuple[tuple[re.Pattern[str], str], ...] = (
-    (RE_REVERSE_ITALIC, "Reverse Italic"),
-    (RE_REVERSE_SLANTED, "Reverse Slanted"),
-    (RE_ITALIC, "Italic"),
-    (RE_OBLIQUE, "Oblique"),
-    (RE_BACKSLANTED, "Backslanted"),
-    (RE_BACKSLANT, "Backslant"),
-    (RE_SLANTED, "Slanted"),
-    (RE_INCLINED, "Inclined"),
-    (RE_RETALIC, "Retalic"),
-    (RE_CURSIVE, "Cursive"),
-    (RE_REVERSE, "Reverse"),
-    (RE_SLANT, "Slant"),
-)
+# Words ID1 leaves out: the RIBBI words. Every other word is an ordinary style word and stays in ID1.
+_ID1_DROPPED_WORDS = frozenset({"regular", "italic", "bold"})
+
+# A measured italic angle at or beyond this many degrees (forward or back) means a slanted face.
+ITALIC_ANGLE_FLOOR = 2.0
 
 
-def _strip_token(pattern: "re.Pattern[str]", text: str) -> tuple[str, bool]:
-    new_text, count = pattern.subn("", text)
-    new_text = " ".join(new_text.split())
-    return new_text, count > 0
+def id1_style(style: str | None) -> str | None:
+    """Style words for ID1: drop only the exact words Regular, Italic and Bold.
 
-
-def _extract_slope_from_style(style: str) -> tuple[str, str | None]:
-    """Extract slope term from style, returning (cleaned_style, slope)."""
-    for pattern, label in _STYLE_SLOPE_EXTRACTORS:
-        if pattern.search(style):
-            style, _ = _strip_token(pattern, style)
-            return style, label
-    return style, None
-
-
-def normalize_style_and_slope_for_id1_id4(
-    subfamily_style: str | None,
-    slope: str | None,
-    *,
-    keep_regular: bool = False,
-) -> tuple[str | None, str | None]:
-    """Normalize a style string for ID1/ID4 policy.
-
-    - Remove Regular (the RIBBI word) for ID1; ID4 passes keep_regular=True because its full name
-      says Regular. Roman, Book, Normal, Plain, Medium, Light and Text are ordinary style words and stay.
-    - If Italic/Oblique/Slanted appear in style, move them into slope when slope is not set
-    - Idempotent: can be executed repeatedly safely
+    No slope vocabulary: Oblique, Cursive, Backslanted and every other word stay, so ID1 + ID2 stay
+    unique (ID2 says Italic for all of them). Roman, Book, Normal, Plain, Medium, Light and Text stay too.
     """
-    subfamily_style = normalize_empty(subfamily_style)
-    slope = normalize_empty(slope)
+    style = normalize_empty(style)
+    if is_empty(style):
+        return None
+    kept = [w for w in str(style).split() if w.lower() not in _ID1_DROPPED_WORDS]
+    return normalize_empty(" ".join(kept))
 
-    if is_empty(subfamily_style):
-        return None, slope
 
-    style = subfamily_style
-    if not keep_regular:
-        style, _ = _strip_token(RE_REGULAR, style)
+@dataclass(frozen=True)
+class RibbiDecision:
+    """ID2 and the style it implies: one of Regular, Italic, Bold, Bold Italic."""
 
-    # Extract and remove slope terms if slope not already set
-    slope_norm = slope
-    if is_empty(slope_norm):
-        style, extracted_slope = _extract_slope_from_style(style)
-        slope_norm = extracted_slope
-    else:
-        # Slope already set, just remove slope terms from style
-        style, _ = _extract_slope_from_style(style)
+    subfamily: str
+    bold: bool
+    italic: bool
+    notes: tuple[str, ...] = ()
 
-    style = " ".join(style.split())
-    return normalize_empty(style), slope_norm
+
+_FS_ITALIC, _FS_BOLD = 0x0001, 0x0020
+_MAC_BOLD, _MAC_ITALIC = 0x0001, 0x0002
+
+
+def decide_ribbi(
+    style: str | None,
+    *,
+    fs_selection: int = 0,
+    mac_style: int = 0,
+    italic_angle: float | None = None,
+) -> RibbiDecision:
+    """Decide ID2 from the name, then the flags, then the italic angle.
+
+    - Bold: the word Bold in the style. Flags decide only when the style says nothing at all.
+      usWeightClass is not used (it is not always 700).
+    - Italic: the word Italic in the style, or a measured angle with |angle| >= ITALIC_ANGLE_FLOOR
+      (forward or back slants). Flags decide only when the style says nothing. A name that says Italic
+      is never demoted by a flat angle (a note is returned instead).
+    """
+    text = normalize_empty(style) or ""
+    words = {w.lower() for w in text.split()}
+    says_nothing = not words
+
+    bold = "bold" in words
+    if not bold and says_nothing:
+        bold = bool(fs_selection & _FS_BOLD or mac_style & _MAC_BOLD)
+
+    notes: list[str] = []
+    slanted = italic_angle is not None and abs(italic_angle) >= ITALIC_ANGLE_FLOOR
+    italic = "italic" in words or slanted
+    if not italic and says_nothing:
+        italic = bool(fs_selection & _FS_ITALIC or mac_style & _MAC_ITALIC)
+    if "italic" in words and italic_angle is not None and not slanted:
+        notes.append(f"the name says Italic but the italic angle is {italic_angle:g} degrees")
+
+    subfamily = "Bold Italic" if bold and italic else "Bold" if bold else "Italic" if italic else "Regular"
+    return RibbiDecision(subfamily, bold, italic, tuple(notes))
 
 
 def normalize_subfamily_term(
@@ -430,20 +419,11 @@ def build_id1(
         # Asterisks are preserved in family names
         return join_nonempty(strip_variable_tokens(base) or base, "Variable")
 
-    style_eff = style
-    slope_eff = slope
-    if use_filename_normalization:
-        style_eff, slope_eff = normalize_style_and_slope_for_id1_id4(
-            style_eff,
-            slope_eff,
-        )
-
-    # ID1: omit slope if it's "Italic"
-    if slope_eff and slope_eff.strip().lower() == "italic":
-        slope_eff = None
+    # ID1 keeps every style word except Regular, Italic and Bold (no slope vocabulary)
+    style_eff = id1_style(join_nonempty(style, slope))
 
     # Asterisks are preserved in ID1 (no sanitization needed)
-    return join_nonempty(family, modifier, style_eff, slope_eff)
+    return join_nonempty(family, modifier, style_eff)
 
 
 def build_id4(
@@ -487,21 +467,11 @@ def build_id4(
         suffix = "Variable Italic" if is_italic_font else "Variable"
         return join_nonempty(base, suffix)
 
-    style_eff = style
-    slope_eff = slope
-    if use_filename_normalization:
-        style_eff, slope_eff = normalize_style_and_slope_for_id1_id4(
-            style_eff,
-            slope_eff,
-            keep_regular=True,
-        )
-
     # ID4 names the weight: "Probe Regular", "Probe Regular Italic" (house convention, DECISIONS.md C1)
-    style_eff = ensure_weight_word(join_nonempty(modifier, style_eff) or "")
-    modifier = None
+    style_eff = ensure_weight_word(join_nonempty(modifier, style, slope) or "")
 
     # Asterisks are preserved in ID4 (no sanitization needed)
-    return join_nonempty(family, style_eff, slope_eff)
+    return join_nonempty(family, style_eff)
 
 
 def build_id16(
@@ -542,7 +512,10 @@ __all__ = [
     "build_id4",
     "build_id16",
     "build_id17",
-    "normalize_style_and_slope_for_id1_id4",
+    "id1_style",
+    "decide_ribbi",
+    "RibbiDecision",
+    "ITALIC_ANGLE_FLOOR",
     "detect_compound_modifier_patterns",
     # ID2
     "allowed_id2_subfamilies",

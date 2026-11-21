@@ -22,7 +22,6 @@ from FontCore.core_filename_parts_parser import parse_filename
 from FontCore.core_font_style_dictionaries import ensure_weight_word
 from FontCore.core_name_policies import (
     build_id4,
-    normalize_style_and_slope_for_id1_id4,
     split_variable_subfamily,
     sync_cff_names_binary,
     normalize_nfc,
@@ -165,11 +164,7 @@ def process_ttx_file(
             new_name = f"{base} {'Variable Italic' if use_var_italic else 'Variable'}"
         else:
             style_eff = style
-            slope_eff = (
-                infer_slope_when_italic(style_eff, slope, fp_enabled=fp_enabled)
-                if is_italic
-                else slope
-            )
+            slope_eff = slope  # names follow the filename; no Italic is appended
             if is_variable_font_ttx(root):
                 if variable_slots is not None:
                     new_name = build_id4(
@@ -331,11 +326,7 @@ def process_binary_font(
             new_name = f"{base} {'Variable Italic' if use_var_italic else 'Variable'}"
         else:
             style_eff = style
-            slope_eff = (
-                infer_slope_when_italic(style_eff, slope, fp_enabled=fp_enabled)
-                if is_italic
-                else slope
-            )
+            slope_eff = slope  # names follow the filename; no Italic is appended
             if is_variable_font_binary(font):
                 if variable_slots is not None:
                     new_name = build_id4(
@@ -559,12 +550,8 @@ def process_file_wrapper(filepath, args, dry_run=False, stats=None, error_tracke
         args.style if _flag_provided("-s", "--style") else (fp_style or args.style)
     )
 
-    # Normalize style and slope according to ID4 policy
-    norm_style, slope_effective = normalize_style_and_slope_for_id1_id4(
-        use_style,
-        args.slope,
-        keep_regular=True,
-    )
+    # ID4 uses the style exactly as the filename (or -s/-sl) gives it; construct_full_name adds Regular
+    norm_style, slope_effective = use_style, args.slope
 
     # Use normalized values
     use_style = norm_style

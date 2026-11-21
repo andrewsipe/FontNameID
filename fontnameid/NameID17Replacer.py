@@ -194,7 +194,7 @@ def process_ttx_file(
                         prefix_from_filename=prefix_from_filename,
                     )
         else:
-            new_name = build_id17(modifier, style_eff, slope_eff)
+            new_name = build_id17(modifier, style_eff, slope)  # names follow the filename; no Italic is appended
 
         # NFC normalize new_name
         new_name = normalize_nfc(new_name) or new_name
@@ -321,7 +321,7 @@ def process_binary_font(
                         prefix_from_filename=prefix_from_filename,
                     )
         else:
-            new_name = build_id17(modifier, style_eff, slope_eff)
+            new_name = build_id17(modifier, style_eff, slope)  # names follow the filename; no Italic is appended
 
         if "name" not in font:
             cs.emit(

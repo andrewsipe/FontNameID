@@ -395,8 +395,6 @@ WEIGHT_WORDS = frozenset(
     | {str(n) for n in range(100, 1100, 100)}
 )
 
-_SLOPE_TOKENS = frozenset(s.lower() for s in SLOPE_BASES)
-
 
 def has_weight_word(text: str) -> bool:
     """True when the style text has a word in the weight position (Bold, Semibold, Regular, Roman, 400...).
@@ -412,10 +410,11 @@ def has_weight_word(text: str) -> bool:
 
 
 def ensure_weight_word(text: str) -> str:
-    """Add Regular when the style has no weight word, before any slope: "Wide Italic" -> "Wide Regular Italic".
+    """Add Regular when the style has no weight word: "Wide Italic" -> "Wide Regular Italic".
 
-    Empty text becomes "Regular". Text that already has a weight word is returned unchanged, so the
-    function is safe to run twice.
+    No slope vocabulary: Regular goes before a trailing Italic (and before a Reverse that leads it);
+    for any other style it goes at the end. Empty text becomes "Regular". Text that already has a weight
+    word is returned unchanged, so the function is safe to run twice.
     """
     text = " ".join((text or "").split())
     if not text:
@@ -423,16 +422,13 @@ def ensure_weight_word(text: str) -> str:
     if has_weight_word(text):
         return text
     tokens = text.split()
-    lowered = [t.lower() for t in tokens]
-    slope_at = next((i for i, t in enumerate(lowered) if t in _SLOPE_TOKENS), None)
-    if slope_at is None and "back" in lowered:  # "Back Slanted"
-        slope_at = lowered.index("back")
-    if slope_at is not None and slope_at > 0 and lowered[slope_at - 1] == "back":
-        slope_at -= 1
-    if slope_at is None:
-        tokens.append("Regular")
+    if tokens[-1].lower() == "italic":
+        at = len(tokens) - 1
+        if at > 0 and tokens[at - 1].lower() == "reverse":
+            at -= 1
+        tokens.insert(at, "Regular")
     else:
-        tokens.insert(slope_at, "Regular")
+        tokens.append("Regular")
     return " ".join(tokens)
 
 

@@ -41,7 +41,6 @@ from FontCore.core_name_policies import (
     build_id4,
     build_id17,
     build_id17_from_variable_slots,
-    normalize_style_and_slope_for_id1_id4,
 )
 from FontCore.core_nameid_replacer_base import (
     has_italic_like_slope_term,
@@ -152,18 +151,10 @@ def expected_names_from_fp(filepath: str, *, is_vf: bool) -> dict[int, str]:
     parsed = parse_filename(filepath)
     family = parsed.family or Path(filepath).stem
     subfamily = parsed.subfamily or None
-    style, slope = normalize_style_and_slope_for_id1_id4(subfamily, None)
-
-    # Mirror NameID1Replacer -fp: never include slope; drop Bold from style.
-    # Avoid re-normalizing inside build_id* (would split Reverse Italic incorrectly).
-    id1_style = re.sub(r"(?i)\bBold\b", "", style or "").strip() or None
+    # Mirror the replacers' -fp policies: ID1 drops only Regular, Italic and Bold; ID4 and ID17 carry a weight.
     return {
-        1: build_id1(
-            family, None, id1_style, None, use_filename_normalization=False
-        ),
-        4: build_id4(
-            family, None, style, slope, use_filename_normalization=False
-        ),
+        1: build_id1(family, None, subfamily, None),
+        4: build_id4(family, None, subfamily, None),
         17: build_id17(None, subfamily, None),
     }
 

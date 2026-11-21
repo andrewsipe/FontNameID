@@ -20,6 +20,8 @@ from fontTools.ttLib.tables._n_a_m_e import NameRecord
 # ruff: noqa: E402
 
 import FontCore.core_console_styles as cs
+from FontCore.core_filename_parts_parser import parse_filename
+from FontCore.core_name_policies import decide_ribbi
 from FontCore.core_file_collector import SUPPORTED_EXTENSIONS
 from FontCore.core_nameid_replacer_base import (
     run_workflow,
@@ -99,86 +101,75 @@ def print_metrics(metrics, detected_subfamily, override_subfamily=None):
         )
 
 
-def get_font_metrics_ttx(root):
-    """Extract font metrics from TTX (XML) file"""
-    metrics = {"is_italic": False, "is_bold": False}
+def style_signal(filepath, *, font=None, root=None, use_filename_style=False):
+    """The style text ID2 reads its name check from.
 
-    italic_angle_val = 0.0
-    fs_selection_val = 0
-    mac_style_val = 0
+    With -fp it is the filename's style (the filename is the source of truth); otherwise the font's own
+    nameID 17. Empty when neither says anything, in which case the flags decide.
+    """
+    if use_filename_style:
+        try:
+            return parse_filename(filepath).subfamily or ""
+        except Exception:
+            return ""
+    try:
+        if font is not None and "name" in font:
+            rec = font["name"].getName(17, 3, 1, 0x409)
+            return rec.toUnicode().strip() if rec else ""
+        if root is not None:
+            nr = root.find('.//namerecord[@nameID="17"][@platformID="3"][@platEncID="1"][@langID="0x409"]')
+            return (nr.text or "").strip() if nr is not None else ""
+    except Exception:
+        return ""
+    return ""
 
-    # post.italicAngle
+
+def _int_value(elem, default=0):
+    if elem is None or not elem.get("value"):
+        return default
+    try:
+        return int(elem.get("value"), 0)
+    except (ValueError, TypeError):
+        return default
+
+
+def get_font_metrics_ttx(root, style_text=None):
+    """Decide bold/italic for a TTX file: name, then flags, then italic angle (decide_ribbi)."""
+    italic_angle = None
     post_table = root.find(".//post")
     if post_table is not None:
-        italic_angle = post_table.find(".//italicAngle")
-        if italic_angle is not None and italic_angle.get("value"):
+        angle_elem = post_table.find(".//italicAngle")
+        if angle_elem is not None and angle_elem.get("value"):
             try:
-                italic_angle_val = float(italic_angle.get("value"))
+                italic_angle = float(angle_elem.get("value"))
             except (ValueError, TypeError):
-                italic_angle_val = 0.0
+                italic_angle = None
 
-    # OS/2.fsSelection and OS/2.usWeightClass
     os2_table = root.find(".//OS_2")
-    if os2_table is not None:
-        fs_selection = os2_table.find(".//fsSelection")
-        if fs_selection is not None and fs_selection.get("value"):
-            raw = fs_selection.get("value")
-            try:
-                fs_selection_val = int(raw, 0)
-            except (ValueError, TypeError):
-                # Fallback: textual flags
-                try:
-                    fs_selection_val = 1 if "ITALIC" in str(raw).upper() else 0
-                except Exception:
-                    fs_selection_val = 0
-
-        weight_class = os2_table.find(".//usWeightClass")
-        if weight_class is not None and weight_class.get("value"):
-            try:
-                weight_value = int(weight_class.get("value"))
-                metrics["is_bold"] = weight_value == 700
-            except (ValueError, TypeError):
-                pass
-
-    # head.macStyle
+    fs_selection = _int_value(os2_table.find(".//fsSelection")) if os2_table is not None else 0
     head_table = root.find(".//head")
-    if head_table is not None:
-        mac_style = head_table.find(".//macStyle")
-        if mac_style is not None and mac_style.get("value"):
-            try:
-                mac_style_val = int(mac_style.get("value"), 0)
-            except (ValueError, TypeError):
-                mac_style_val = 0
+    mac_style = _int_value(head_table.find(".//macStyle")) if head_table is not None else 0
 
-    # Italic if any signal says italic
-    metrics["is_italic"] = bool(
-        (fs_selection_val & 0x01) or (mac_style_val & 0x02) or (italic_angle_val != 0.0)
+    decision = decide_ribbi(
+        style_text, fs_selection=fs_selection, mac_style=mac_style, italic_angle=italic_angle
     )
+    return {"is_italic": decision.italic, "is_bold": decision.bold, "notes": list(decision.notes)}
 
-    return metrics
 
-
-def get_font_metrics_binary(font):
-    """Extract font metrics from binary font"""
-    metrics = {"is_italic": False, "is_bold": False}
-
+def get_font_metrics_binary(font, style_text=None):
+    """Decide bold/italic for a binary font: name, then flags, then italic angle (decide_ribbi)."""
     os2_table = font["OS/2"] if "OS/2" in font else None
     head_table = font["head"] if "head" in font else None
     post_table = font["post"] if "post" in font else None
 
     fs_selection = getattr(os2_table, "fsSelection", 0) if os2_table else 0
     mac_style = getattr(head_table, "macStyle", 0) if head_table else 0
-    italic_angle = getattr(post_table, "italicAngle", 0.0) if post_table else 0.0
-    weight_value = getattr(os2_table, "usWeightClass", 400) if os2_table else 400
+    italic_angle = getattr(post_table, "italicAngle", None) if post_table else None
 
-    # Italic if any signal says italic
-    metrics["is_italic"] = bool(
-        (fs_selection & 0x01) or (mac_style & 0x02) or (italic_angle != 0.0)
+    decision = decide_ribbi(
+        style_text, fs_selection=fs_selection, mac_style=mac_style, italic_angle=italic_angle
     )
-    # Bold strictly when weight == 700 per your requirement
-    metrics["is_bold"] = weight_value == 700
-
-    return metrics
+    return {"is_italic": decision.italic, "is_bold": decision.bold, "notes": list(decision.notes)}
 
 
 def determine_subfamily(metrics):
@@ -248,6 +239,7 @@ def process_ttx_file(
     string_override=None,
     dry_run=False,
     empty_fields_only=False,
+    use_filename_style=False,
 ):
     """Process TTX (XML) file to replace nameID="2" record"""
     try:
@@ -261,7 +253,10 @@ def process_ttx_file(
             subfamily = string_override
         else:
             # Get font metrics and determine subfamily
-            metrics = get_font_metrics_ttx(root)
+            metrics = get_font_metrics_ttx(
+                root,
+                style_signal(filepath, root=root, use_filename_style=use_filename_style),
+            )
             detected_subfamily = determine_subfamily(metrics)
             # Use override if provided, otherwise use detected subfamily
             subfamily = subfamily_override if subfamily_override else detected_subfamily
@@ -321,11 +316,34 @@ def process_ttx_file(
             show_created(2, filepath, subfamily, dry_run, console)
             file_changed = True
 
+        # The style flags follow ID2 even when the name record is already right
+        name_changed = file_changed
+        flags_changed = False
+        fs_bits_set, mac_bits_set = compute_ribbi_flags(subfamily)
+        os2_probe = root.find(".//OS_2")
+        if os2_probe is not None:
+            fs_probe = os2_probe.find(".//fsSelection")
+            cur_fs = _parse_bits_16(fs_probe.get("value")) if fs_probe is not None else 0
+            flags_changed |= ((cur_fs & ~(0x0001 | 0x0020 | 0x0040)) | fs_bits_set) != cur_fs
+        head_probe = root.find(".//head")
+        if head_probe is not None:
+            mac_probe = head_probe.find(".//macStyle")
+            cur_mac = _parse_bits_16(mac_probe.get("value")) if mac_probe is not None else 0
+            flags_changed |= ((cur_mac & ~(0x01 | 0x02)) | mac_bits_set) != cur_mac
+        if flags_changed and not name_changed:
+            show_info(
+                f"Style flags (fsSelection, macStyle) set to match {subfamily}",
+                dry_run,
+                console,
+            )
+        file_changed = name_changed or flags_changed
+
         # Only save if changes were made
         if file_changed and not dry_run:
-            # Deduplicate and write back without reformatting (preserve existing whitespace)
-            deduplicate_namerecords_ttx(name_table, 2, subfamily)
-            _adjust_ttx_whitespace(name_table)
+            if name_changed:
+                # Deduplicate and write back without reformatting (preserve existing whitespace)
+                deduplicate_namerecords_ttx(name_table, 2, subfamily)
+                _adjust_ttx_whitespace(name_table)
 
             # Update OS/2.fsSelection and head.macStyle to match RIBBI (non-destructive)
             fs_bits_set, mac_bits_set = compute_ribbi_flags(subfamily)
@@ -380,6 +398,7 @@ def process_binary_font(
     string_override=None,
     dry_run=False,
     empty_fields_only=False,
+    use_filename_style=False,
 ):
     """Process binary font files (TTF, OTF, WOFF, WOFF2)"""
     try:
@@ -393,7 +412,10 @@ def process_binary_font(
             subfamily = string_override
         else:
             # Get font metrics and determine subfamily
-            metrics = get_font_metrics_binary(font)
+            metrics = get_font_metrics_binary(
+                font,
+                style_signal(filepath, font=font, use_filename_style=use_filename_style),
+            )
             detected_subfamily = determine_subfamily(metrics)
             # Use override if provided, otherwise use detected subfamily
             subfamily = subfamily_override if subfamily_override else detected_subfamily
@@ -451,28 +473,50 @@ def process_binary_font(
             show_created(2, filepath, subfamily, dry_run, console)
             file_changed = True
 
+        # The style flags follow ID2 even when the name record is already right
+        name_changed = file_changed
+        flags_changed = False
+        try:
+            fs_bits_set, mac_bits_set = compute_ribbi_flags(subfamily)
+            if "OS/2" in font and hasattr(font["OS/2"], "fsSelection"):
+                new_fs = (font["OS/2"].fsSelection & ~(0x0001 | 0x0020 | 0x0040)) | fs_bits_set
+                flags_changed |= new_fs != font["OS/2"].fsSelection
+            if "head" in font and hasattr(font["head"], "macStyle"):
+                new_mac = (font["head"].macStyle & ~(0x01 | 0x02)) | mac_bits_set
+                flags_changed |= new_mac != font["head"].macStyle
+        except Exception:
+            flags_changed = False
+        if flags_changed and not name_changed:
+            show_info(
+                f"Style flags (fsSelection, macStyle) set to match {subfamily}",
+                dry_run,
+                console,
+            )
+        file_changed = name_changed or flags_changed
+
         # Only save if changes were made
         if file_changed and not dry_run:
-            # Deduplicate
-            deduplicate_namerecords_binary(name_table, 2, subfamily)
+            if name_changed:
+                # Deduplicate
+                deduplicate_namerecords_binary(name_table, 2, subfamily)
 
-            # Binary preservation for variable fonts (fvar+STAT)
-            try:
-                from FontCore.core_ttx_table_io import (
-                    preserve_low_nameids_in_fvar_stat_binary,
-                )
-
-                count_pres = preserve_low_nameids_in_fvar_stat_binary(
-                    font, threshold=17
-                )
-                if count_pres:
-                    show_info(
-                        f"Preserved and remapped {cs.fmt_count(count_pres)} reference(s)",
-                        dry_run,
-                        console,
+                # Binary preservation for variable fonts (fvar+STAT)
+                try:
+                    from FontCore.core_ttx_table_io import (
+                        preserve_low_nameids_in_fvar_stat_binary,
                     )
-            except Exception:
-                pass
+
+                    count_pres = preserve_low_nameids_in_fvar_stat_binary(
+                        font, threshold=17
+                    )
+                    if count_pres:
+                        show_info(
+                            f"Preserved and remapped {cs.fmt_count(count_pres)} reference(s)",
+                            dry_run,
+                            console,
+                        )
+                except Exception:
+                    pass
 
             # Update OS/2.fsSelection and head.macStyle on binary (non-destructive)
             try:
@@ -509,6 +553,7 @@ def process_file(
     string_override=None,
     dry_run=False,
     empty_fields_only=False,
+    use_filename_style=False,
 ):
     """Process a single font file"""
     ext = Path(filepath).suffix.lower()
@@ -526,6 +571,7 @@ def process_file(
             string_override,
             dry_run,
             empty_fields_only,
+            use_filename_style,
         )
     else:
         return process_binary_font(
@@ -534,6 +580,7 @@ def process_file(
             string_override,
             dry_run,
             empty_fields_only,
+            use_filename_style,
         )
 
 
@@ -587,6 +634,7 @@ def process_file_wrapper(filepath, args, dry_run=False, stats=None):
         args.string,
         dry_run,
         getattr(args, "empty_fields_only", False),
+        bool(getattr(args, "filename_parser", False)),
     )
 
 

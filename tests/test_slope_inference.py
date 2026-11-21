@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 
-from FontCore.core_name_policies import build_id17, normalize_style_and_slope_for_id1_id4
+from FontCore.core_name_policies import build_id17, id1_style
 from FontCore.core_nameid_replacer_base import (
     has_italic_like_slope_term,
     infer_slope_when_italic,
@@ -50,24 +50,13 @@ def test_build_id17_keeps_slanted_without_extra_italic():
     assert build_id17(None, "Black Slanted", slope) == "Black Slanted"
 
 
-def test_normalize_extracts_backslanted_and_inclined():
-    style, slope = normalize_style_and_slope_for_id1_id4("Bold Backslanted", None)
-    assert style == "Bold"
-    assert slope == "Backslanted"
-    style, slope = normalize_style_and_slope_for_id1_id4("Light Inclined", None)
-    assert style == "Light"
-    assert slope == "Inclined"
-
-
-def test_normalize_keeps_reverse_compound_slopes():
-    style, slope = normalize_style_and_slope_for_id1_id4("Black Reverse Italic", None)
-    assert style == "Black"
-    assert slope == "Reverse Italic"
-    style, slope = normalize_style_and_slope_for_id1_id4(
-        "Regular Reverse Slanted", None
-    )
-    assert style is None or style == ""
-    assert slope == "Reverse Slanted"
+def test_id1_keeps_unlisted_slope_words_and_drops_only_regular_italic_bold():
+    """No slope vocabulary in names: only the exact words Regular, Italic and Bold leave ID1."""
+    assert id1_style("Bold Backslanted") == "Backslanted"
+    assert id1_style("Light Inclined") == "Light Inclined"
+    assert id1_style("Black Reverse Italic") == "Black Reverse"
+    assert id1_style("Regular Italic") is None
+    assert id1_style("Bold Italic") is None
 
 
 def test_audit_accepts_reverse_compound_slopes():

@@ -22,7 +22,7 @@ import FontCore.core_console_styles as cs
 from FontCore.core_filename_parts_parser import parse_filename
 from FontCore.core_name_policies import (
     build_id1,
-    normalize_style_and_slope_for_id1_id4,
+    id1_style,
     sync_cff_names_binary,
     normalize_nfc,
     detect_compound_modifier_patterns,
@@ -529,16 +529,10 @@ def process_files(file_paths, script_args, batch_context=False):
 
         # Apply name policies for ID1 (same as original version)
         if not args.string:
-            # Normalize style and slope according to ID1 policy
-            norm_style, norm_slope = normalize_style_and_slope_for_id1_id4(
-                use_style,
-                args.slope,
-            )
-
-            # ID1 policy: never include slope; always drop Bold token from style
-            norm_style = re.sub(r"(?i)\bBold\b", "", norm_style or "").strip() or None
-            if norm_slope:
-                norm_slope = None
+            # ID1 policy: drop only the exact words Regular, Italic and Bold from the style (and the
+            # slope flag); every other word, including Oblique, Cursive and Backslanted, stays.
+            norm_style = id1_style(" ".join(p for p in (use_style, args.slope) if p))
+            norm_slope = None
 
             # Use normalized values
             use_style = norm_style
