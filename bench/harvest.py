@@ -23,10 +23,10 @@ from fontTools.ttLib import TTFont
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from FontCore.core_filename_parts_parser import parse_filename  # noqa: E402
 
-SKIP_DIRS = {"_archive", "_quarantine", "_ttx", "_ttx_top"}
+SKIP_DIRS = {"_archive", "_quarantine", "_ttx", "_ttx_top"}  # hidden folders (.fontvault, ...) are skipped too
 EXTS = {".otf", ".ttf"}
 COLUMNS = [
-    "foundry", "rel_path", "ext", "stem", "family", "style_fn", "has_hyphen",
+    "foundry", "folder", "rel_path", "ext", "stem", "family", "style_fn", "has_hyphen",
     "id1", "id2", "id4", "id16", "id17", "fs_selection", "mac_style", "weight_class",
     "italic_angle", "is_variable", "has_stat", "error",
 ]
@@ -34,7 +34,7 @@ COLUMNS = [
 
 def list_fonts(root: Path):
     for dirpath, dirnames, filenames in os.walk(root):
-        dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
+        dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS and not d.startswith(".")]
         for name in filenames:
             if Path(name).suffix.lower() in EXTS:
                 yield Path(dirpath) / name
@@ -51,12 +51,13 @@ def name_record(font, name_id: int) -> str:
         return ""
 
 
-def row_for(path: Path, root: Path) -> dict:
+def row_for(path: Path, root: Path, group: str = "filename") -> dict:
     rel = path.relative_to(root)
     parsed = parse_filename(str(path))
     row = {c: "" for c in COLUMNS}
     row.update(
-        foundry=rel.parts[0] if len(rel.parts) > 1 else "",
+        foundry=("/".join(rel.parts[:2]) if group == "folder" and len(rel.parts) > 2 else rel.parts[0] if len(rel.parts) > 1 else ""),
+        folder=str(rel.parent),
         rel_path=str(rel),
         ext=path.suffix.lower(),
         stem=path.stem,
@@ -88,6 +89,8 @@ def main() -> int:
     ap.add_argument("roots", nargs="+", type=Path)
     ap.add_argument("--sample", type=int, default=800, help="approximate number of fonts (whole families)")
     ap.add_argument("--seed", type=int, default=1)
+    ap.add_argument("--group", choices=["filename", "folder"], default="filename",
+                    help="what makes a family: the family parsed from the filename (inside a foundry folder), or the family folder (FontVault)")
     ap.add_argument("--out", type=Path, default=Path("bench/_data/harvest_sample.csv"))
     args = ap.parse_args()
 
@@ -102,7 +105,10 @@ def main() -> int:
             except Exception:
                 fam = path.stem
             rel = path.relative_to(root)
-            families[(root, rel.parts[0] if len(rel.parts) > 1 else "", fam)].append(path)
+            if args.group == "folder":
+                families[(root, "/".join(rel.parts[:-1]), "")].append(path)
+            else:
+                families[(root, rel.parts[0] if len(rel.parts) > 1 else "", fam)].append(path)
 
     keys = sorted(families, key=lambda k: (str(k[0]), k[1], k[2]))
     random.Random(args.seed).shuffle(keys)
@@ -120,7 +126,7 @@ def main() -> int:
         writer.writeheader()
         for key in chosen:
             for path in sorted(families[key]):
-                writer.writerow(row_for(path, key[0]))
+                writer.writerow(row_for(path, key[0], args.group))
                 rows += 1
     print(f"found {total} fonts in {len(families)} families; wrote {rows} fonts from {len(chosen)} families to {args.out}")
     return 0

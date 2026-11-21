@@ -143,9 +143,50 @@ def main(path: str) -> None:
     p(f"  ID1 contains the word Bold/Regular/Italic (RIBBI words that ID1 should drop): "
       f"{pct(sum(any(w in r['id1'].lower().split() for w in ('bold', 'regular', 'italic')) for r in ok), len(ok))}")
 
+    # ---- library conventions (meaningful for a curated library: one folder per font, named by its full name)
+    if rows and "folder" in rows[0] and rows[0]["folder"]:
+        import re as _re
+        norm = lambda t: _re.sub(r"[^a-z0-9]", "", (t or "").lower())
+        p("\n== Library conventions (how the curated library names things today)")
+        kinds = Counter()
+        ex = {}
+        for r in ok:
+            fold = Path(r["folder"]).name
+            fam, sty = r["family"], r["style_fn"]
+            id4 = r["id4"]
+            id4_noreg = " ".join(w for w in id4.split() if w.lower() != "regular")
+            fam_sty = f"{fam} {sty}".strip()
+            if norm(fold) == norm(id4):
+                k = "folder name = ID4"
+            elif norm(fold) == norm(id4_noreg):
+                k = "folder name = ID4 without the word Regular"
+            elif norm(fold) == norm(fam_sty):
+                k = "folder name = filename family + style"
+            elif norm(fold) == norm(" ".join(w for w in fam_sty.split() if w.lower() not in ("regular", "normal"))):
+                k = "folder name = filename family + style, minus Regular/Normal"
+            else:
+                k = "folder name is something else"
+            kinds[k] += 1
+            ex.setdefault(k, f"{fold!r} (ID4 {id4!r}, file {r['stem']})")
+        for k, n in kinds.most_common():
+            p(f"  {pct(n, len(ok)):12s} {k}   e.g. {ex[k]}")
+        regs = [r for r in ok if shape(r["style_fn"]) == "R"]
+        p(f"  filename style is exactly 'Regular': {len(regs)};  ID4 contains the word Regular: "
+          f"{pct(sum('regular' in r['id4'].lower().split() for r in regs), len(regs))};  ID4 equals ID1 (old convention): "
+          f"{pct(sum(r['id4'] == r['id1'] for r in regs), len(regs))}")
+        eq = [r for r in ok if any(w in r["style_fn"].lower().split() for w in ("book", "normal", "medium", "plain", "roman", "light"))
+              and "bold" not in r["style_fn"].lower().split()]
+        p(f"  styles with an equivalent weight word (Book/Normal/Medium/Plain/Roman/Light): {len(eq)}; "
+          f"the word is missing from ID1: {pct(sum(not any(w in r['id1'].lower().split() for w in r['style_fn'].lower().split() if w in ('book','normal','medium','plain','roman','light')) for r in eq), len(eq))}, "
+          f"missing from ID4: {pct(sum(not any(w in r['id4'].lower().split() for w in r['style_fn'].lower().split() if w in ('book','normal','medium','plain','roman','light')) for r in eq), len(eq))}")
+        hy = Counter(r["stem"].count("-") for r in rows)
+        p(f"  hyphens in the filename: " + ", ".join(f"{k}: {v}" for k, v in sorted(hy.items())) +
+          f";  double spaces: {sum('  ' in r['stem'] for r in rows)};  spaces at all: {sum(' ' in r['stem'] for r in rows)}")
+        p(f"  folder name ends in a digit (dedupe counter such as 'Silk Sans 2'): {pct(sum(Path(r['folder']).name[-1:].isdigit() for r in rows), len(rows))}")
+
     text = "\n".join(out)
     print(text)
-    Path(path).with_name("patterns_report.txt").write_text(text + "\n", encoding="utf-8")
+    Path(path).with_name(Path(path).stem + "_patterns.txt").write_text(text + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":
