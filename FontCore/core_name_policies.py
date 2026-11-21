@@ -54,7 +54,6 @@ from FontCore.core_string_utils import normalize_empty, is_empty, join_nonempty
 from FontCore.core_font_style_dictionaries import (
     ELIDABLE_VF_FILENAME_SLOPES,
     ITALIC_LIKE_SLOPE_TERMS,
-    STYLE_WORDS,
     ensure_weight_word,
 )
 
@@ -157,8 +156,7 @@ class RibbiDecision:
     notes: tuple[str, ...] = ()
 
 
-_SLOPE_LIKE = {"oblique", "slanted", "backslanted"}
-_KNOWN_STYLE_WORDS = {w.lower() for w in STYLE_WORDS}
+_SLOPE_LIKE = {"oblique", "slanted", "slant", "backslanted", "backslant", "inclined", "cursive", "kursiv"}
 
 _FS_ITALIC, _FS_BOLD = 0x0001, 0x0020
 _MAC_BOLD, _MAC_ITALIC = 0x0001, 0x0002
@@ -196,12 +194,11 @@ def decide_ribbi(
     italic = "italic" in words
     if not italic and says_nothing:
         italic = bool(fs_selection & _FS_ITALIC or mac_style & _MAC_ITALIC)
-    # The angle can add Italic only when the style holds a word that might name a slope: an unknown
-    # word, or Oblique/Slanted/Backslanted. A style of only weight, width and Regular words is
-    # a plain upright name, so a slanted design keeps Regular (a script is not an italic variant).
-    might_name_slope = says_nothing or any(
-        w in _SLOPE_LIKE or w not in _KNOWN_STYLE_WORDS for w in words
-    )
+    # The angle can add Italic only when the style names a slope (Oblique, Backslant, Cursive, ...) or
+    # says nothing. Any other style (a weight, Regular, a width, or a bespoke word like Bulky) is an
+    # upright name, so a slanted design keeps Regular: a script is not an italic variant, and an
+    # unknown word next to an Italic sibling must not collide with it (PolySansMono Bulky / Bulky Italic).
+    might_name_slope = says_nothing or bool(words & _SLOPE_LIKE)
     if not italic and slanted and might_name_slope:
         italic = True
     if slanted and not italic:

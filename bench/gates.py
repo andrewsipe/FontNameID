@@ -132,13 +132,15 @@ def main(data: Path, harvest_name: str = "harvest_sample.csv", work_name: str = 
     # G8 ID2 follows the rule
     def expected_id2(h):
         style = toks(h["style_fn"])
-        it = "italic" in style or abs(f(h["italic_angle"])) >= ITALIC_ANGLE_FLOOR
+        slope_words = {"oblique", "slanted", "slant", "backslanted", "backslant", "inclined", "cursive", "kursiv"}
+        angle_counts = abs(f(h["italic_angle"])) >= ITALIC_ANGLE_FLOOR and (not style or bool(set(style) & slope_words))
+        it = "italic" in style or angle_counts
         bold = "bold" in style or (not style and (int(f(h["fs_selection"])) & 0x20 or int(f(h["mac_style"])) & 1))
         if not style and int(f(h["fs_selection"])) & 1 or (not style and int(f(h["mac_style"])) & 2):
             it = True
         return "Bold Italic" if bold and it else "Bold" if bold else "Italic" if it else "Regular"
     bad = [(h, r) for h, r in rows if r["id2"] != expected_id2(h)]
-    gate("G8", "ID2 follows the rule (name, then flags, then angle)", bad, len(rows),
+    gate("G8", "ID2 follows the rule (name wins; the angle counts only for an empty or slope-word style)", bad, len(rows),
          [f"{h['stem']}: style {h['style_fn']!r} angle {h['italic_angle']} -> ID2 {r['id2']!r}, rule says {expected_id2(h)!r}" for h, r in bad])
     bad = [(h, r) for h, r in rows if r["id2"] not in RIBBI]
     gate("G8b", "ID2 is one of Regular, Italic, Bold, Bold Italic", bad, len(rows), [f"{h['stem']}: {r['id2']!r}" for h, r in bad])
