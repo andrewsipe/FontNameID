@@ -409,24 +409,48 @@ def has_weight_word(text: str) -> bool:
     return any(t in WEIGHT_WORDS for t in tokens)
 
 
-def ensure_weight_word(text: str) -> str:
-    """Add Regular when the style has no weight word: "Wide Italic" -> "Wide Regular Italic".
+_WIDTH_LOWER = None
 
-    No slope vocabulary: Regular goes before a trailing Italic (and before a Reverse that leads it);
-    for any other style it goes at the end. Empty text becomes "Regular". Text that already has a weight
-    word is returned unchanged, so the function is safe to run twice.
+
+def _width_lower() -> frozenset:
+    global _WIDTH_LOWER
+    if _WIDTH_LOWER is None:
+        _WIDTH_LOWER = frozenset(
+            {w.lower() for w in WIDTH_BASES}
+            | {f"{m}{w}".lower() for m in MODIFIERS for w in WIDTH_BASES}
+            | {f"{'x' * n}{w}".lower() for n in range(1, 8) for w in WIDTH_BASES}
+        )
+    return _WIDTH_LOWER
+
+
+def unknown_weight_candidates(text: str) -> list:
+    """Words in a style that has no weight word and are neither a width nor Italic.
+
+    Such a word may already be the weight under a name the tool does not know (Air, Fine...), so a
+    weight is not added next to it. Empty when the style has a weight word or holds only width/Italic words.
+    """
+    text = " ".join((text or "").split())
+    if not text or has_weight_word(text):
+        return []
+    return [t for t in text.split() if t.lower() != "italic" and t.lower() not in _width_lower()]
+
+
+def ensure_weight_word(text: str) -> str:
+    """Add Regular when the style has no weight word and nothing in it could be one.
+
+    Added only when the style is empty or holds only width and Italic words: "Wide Italic" ->
+    "Wide Regular Italic", "Condensed" -> "Condensed Regular". When the style has any other word
+    (Air, Oblique, Circle...) it is returned unchanged: that word may be the weight, and guessing
+    would label it Regular. Safe to run twice.
     """
     text = " ".join((text or "").split())
     if not text:
         return "Regular"
-    if has_weight_word(text):
+    if has_weight_word(text) or unknown_weight_candidates(text):
         return text
     tokens = text.split()
     if tokens[-1].lower() == "italic":
-        at = len(tokens) - 1
-        if at > 0 and tokens[at - 1].lower() == "reverse":
-            at -= 1
-        tokens.insert(at, "Regular")
+        tokens.insert(len(tokens) - 1, "Regular")
     else:
         tokens.append("Regular")
     return " ".join(tokens)

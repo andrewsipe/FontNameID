@@ -40,6 +40,7 @@ from FontCore.core_ttx_table_io import (
 from FontCore.core_file_collector import SUPPORTED_EXTENSIONS
 from FontCore.core_nameid_replacer_base import (
     run_workflow,
+    no_style_skip_reason,
     show_parsing,
     show_saved,
     show_info,
@@ -471,6 +472,7 @@ def process_files(file_paths, script_args, batch_context=False):
         description="Typographic Family",
         operations=operations,
         batch_context=batch_context,
+        skip_fn=no_style_skip_reason,
     )
 
     # Return appropriate format based on context

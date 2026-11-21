@@ -28,7 +28,8 @@ from FontCore.core_variable_filename_parser import (
     format_variable_filename,
     variable_slots_from_path,
 )
-from FontCore.core_font_style_dictionaries import ITALIC_LIKE_SLOPE_TERMS
+from FontCore.core_filename_parts_parser import parse_filename
+from FontCore.core_font_style_dictionaries import ITALIC_LIKE_SLOPE_TERMS, unknown_weight_candidates
 import re
 
 logger = get_logger(__name__)
@@ -357,6 +358,42 @@ def show_info(message: str, dry_run: bool, console) -> None:
     )
 
 
+def fp_enabled(args) -> bool:
+    """True when -fp is on: a flag standalone, or a string (possibly empty) when batch passes it."""
+    return getattr(args, "filename_parser", None) not in (None, False)
+
+
+def no_style_skip_reason(filepath: str, args) -> Optional[str]:
+    """With -fp, a filename with no hyphen has no style to read: say so and skip the file."""
+    if not fp_enabled(args):
+        return None
+    stem = Path(filepath).stem
+    _, _, style = stem.partition("-")
+    if "-" in stem and style.strip():
+        return None
+    return (
+        "The filename has no hyphen, so there is no style to read. Skipped. "
+        "Add one first (filenametools regular), or set the names with flags."
+    )
+
+
+def unknown_weight_note(filepath: str, args) -> Optional[str]:
+    """With -fp, a style with no weight word and some other word: say Regular was not added."""
+    if not fp_enabled(args):
+        return None
+    try:
+        style = parse_filename(filepath).subfamily
+    except Exception:
+        return None
+    words = unknown_weight_candidates(style)
+    if not words:
+        return None
+    return (
+        f"No weight word in the filename style ({', '.join(words)}). Regular was not added; "
+        "if a weight is missing, add it to the filename."
+    )
+
+
 def show_warning(filepath: str, message: str, dry_run: bool, console) -> None:
     """Display WARNING message with explanation"""
     cs.StatusIndicator("warning", dry_run=dry_run).add_file(filepath).add_message(
@@ -518,6 +555,8 @@ def run_workflow(
     description: str,
     operations: list,
     batch_context: bool = False,
+    skip_fn=None,
+    note_fn=None,
 ) -> dict:
     """
     Complete workflow orchestration for NameID replacer scripts.
@@ -535,6 +574,8 @@ def run_workflow(
         description: Description of the nameID (e.g., "Unique ID")
         operations: List of operation descriptions for preflight checklist
         batch_context: True when called from BatchRunner (enables quit)
+        skip_fn: optional (filepath, script_args) -> message; a message skips the file with a warning
+        note_fn: optional (filepath, script_args) -> message; a message is shown and the file is still processed
 
     Returns:
         dict: Statistics dictionary with exit_code (0 success, 1 if any per-file errors,
@@ -659,6 +700,18 @@ def run_workflow(
     # Process files with stats collection
     for file in font_files:
         try:
+            if skip_fn is not None:
+                reason = skip_fn(file, script_args)
+                if reason:
+                    show_warning(file, reason, script_args.dry_run, console)
+                    stats.add_warning(name_id, file, reason, "skipped")
+                    stats.unchanged += 1
+                    continue
+            if note_fn is not None:
+                note = note_fn(file, script_args)
+                if note:
+                    show_warning(file, note, script_args.dry_run, console)
+                    stats.add_warning(name_id, file, note, "weight")
             result: FileProcessResult = process_file_fn(
                 file, script_args, script_args.dry_run, stats
             )

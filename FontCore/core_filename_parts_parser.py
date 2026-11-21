@@ -419,7 +419,7 @@ def format_pascal_words(value: str) -> str:
 
     Example: "QueenSansExtra" -> "Queen Sans Extra".
     Acronym runs are preserved: "UIUXKit" -> "UIUX Kit".
-    Underscores act as additional breakpoint separators: "ABC_EFGRegular" -> "ABC EFG Regular".
+    Underscores and spaces act as additional breakpoint separators: "ABC_EFGRegular" -> "ABC EFG Regular".
     Segments starting with lowercase preserve their original casing: "oook-Regular" -> "oook Regular".
     Digit sequences followed by lowercase-only tokens are merged: "35mm" stays "35mm" not "35 Mm".
     Special characters have contextual spacing rules applied (leading-space, trailing-space, no-space, etc.).
@@ -427,8 +427,8 @@ def format_pascal_words(value: str) -> str:
     if not value:
         return ""
 
-    # Split by underscores and filter out empty segments
-    segments = [seg for seg in value.split("_") if seg]
+    # Split at underscores and spaces (a name that already has spaces is not PascalCase) and drop empties
+    segments = [seg for seg in re.split(r"[_\s]+", value) if seg]
 
     # Tokenize each segment and format tokens
     formatted_tokens = []

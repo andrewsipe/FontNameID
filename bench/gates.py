@@ -15,8 +15,14 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from FontCore.core_font_style_dictionaries import STYLE_WORDS, WEIGHT_WORDS, has_weight_word  # noqa: E402
+from FontCore.core_font_style_dictionaries import (  # noqa: E402
+    STYLE_WORDS,
+    WEIGHT_WORDS,
+    has_weight_word,
+    unknown_weight_candidates,
+)
 from FontCore.core_name_policies import ITALIC_ANGLE_FLOOR  # noqa: E402
+from FontCore.core_filename_parts_parser import parse_filename  # noqa: E402
 from patterns import shape  # noqa: E402
 
 RIBBI = {"Regular", "Italic", "Bold", "Bold Italic"}
@@ -39,9 +45,16 @@ def f(v, d=0.0):
 
 def main(data: Path) -> None:
     harvest = {r["rel_path"]: r for r in read(data / "harvest_sample.csv")}
+    for h in harvest.values():  # re-read the filename with the current parser, not the one the harvest ran with
+        parsed = parse_filename(h["stem"] + h["ext"])
+        h["style_fn"], h["family"] = parsed.subfamily, parsed.family
     res = {r["rel_path"]: r for r in read(data / "work" / "results.csv")}
     alone = read(data / "work" / "alone.csv")
     rows = [(harvest[k], res[k]) for k in res]
+    # -fp skips a filename with no style after a hyphen (nothing to read); those fonts keep their old names
+    skipped = [(h, r) for h, r in rows if h["has_hyphen"] == "False" or not h["style_fn"].strip()]
+    skipped_paths = {h["rel_path"] for h, r in skipped}
+    rows = [(h, r) for h, r in rows if h["rel_path"] not in skipped_paths]
     static = [(h, r) for h, r in rows if h["is_variable"] != "True"]
     out, fails = [], {}
 
@@ -58,8 +71,8 @@ def main(data: Path) -> None:
          [f"{h['stem']}: ID2 {r['id2']!r} fs={r['fs_selection']} mac={r['mac_style']} angle={r['italic_angle']}" for h, r in bad])
 
     # G2 ID4 weight word
-    bad = [(h, r) for h, r in static if not has_weight_word(r["id4"].replace(r["id1"], "", 1)) and not has_weight_word(r["id4"])]
-    gate("G2", "ID4 carries a weight word (static fonts)", bad, len(static),
+    bad = [(h, r) for h, r in static if not has_weight_word(r["id4"]) and not unknown_weight_candidates(h["style_fn"])]
+    gate("G2", "ID4 carries a weight word (static fonts; styles with an unknown word are G9 notes, not failures)", bad, len(static),
          [f"{h['stem']}  ->  ID4 {r['id4']!r}" for h, r in bad])
 
     # G3 uniqueness
@@ -130,25 +143,20 @@ def main(data: Path) -> None:
     bad = [(h, r) for h, r in rows if r["id2"] not in RIBBI]
     gate("G8b", "ID2 is one of Regular, Italic, Bold, Bold Italic", bad, len(rows), [f"{h['stem']}: {r['id2']!r}" for h, r in bad])
 
-    # G9 missing-weight exposure (informational): where Regular was added
-    out.append("\n[G9] where the tool had to ADD a weight (filename style has no weight word) -- informational")
+    # G9 missing weights (informational): what the tool did when the style has no weight word
+    out.append("\n[G9] filename style has no weight word -- what the tool did (informational)")
     miss = [(h, r) for h, r in static if not has_weight_word(h["style_fn"])]
     by = defaultdict(list)
     for h, r in miss:
-        s = shape(h["style_fn"])
-        stem_weight = (h["has_hyphen"] == "False" and any(c in ("R", "W") for c in shape(h["family"]).split()))
-        key = "no hyphen, weight already in the stem" if stem_weight else \
-              "no hyphen, no weight anywhere" if h["has_hyphen"] == "False" else \
-              "style is only Italic" if s == "I" else \
-              "style is only width/Italic words" if set(s.split()) <= {"D", "I"} else \
-              "style has unknown word(s) and no weight (possible unknown weight name)"
-        by[key].append((h, r))
+        by["Regular added (style empty or only width/Italic words)" if not unknown_weight_candidates(h["style_fn"])
+           else "left as is, with a note (unknown word may be the weight)"].append((h, r))
     for key, v in sorted(by.items(), key=lambda kv: -len(kv[1])):
         out.append(f"  {len(v):4d}  {key}")
         for h, r in v[:3]:
             out.append(f"          {h['stem']!r}  ->  ID4 {r['id4']!r}  ID17 {r['id17']!r}")
-    exposed = len(by["no hyphen, weight already in the stem"]) + len(by["style has unknown word(s) and no weight (possible unknown weight name)"])
-    out.append(f"  => {exposed} fonts ({100*exposed/len(static):.0f}% of static) got a Regular added next to a word that may already be the weight")
+    out.append(f"\n[G11] skipped: filename has no hyphen / no style -- names left as they were (informational): {len(skipped)}")
+    for h, r in skipped[:6]:
+        out.append(f"          {h['stem']!r}   ID1 stays {r['id1']!r}")
 
     # G10 truncated-looking words (prefix of a known word, not equal to any) -- informational
     known = {w.lower() for w in STYLE_WORDS} | WEIGHT_WORDS | {"italic", "oblique", "condensed", "regular", "extended"}
@@ -160,7 +168,7 @@ def main(data: Path) -> None:
     out.append("\n[G10] style words that look cut short (prefix of a known word) -- informational")
     out.append("  " + ", ".join(f"{w}x{n}" for w, n in trunc.most_common(14)))
 
-    head = ["== Naming bench: gates over %d fonts (%d static, %d variable)" % (len(rows), len(static), len(rows) - len(static))]
+    head = ["== Naming bench: gates over %d fonts (%d static, %d variable); %d skipped (no style in the filename)" % (len(rows), len(static), len(rows) - len(static), len(skipped))]
     head.append("gate summary: " + "  ".join(f"{k}:{'ok' if v == 0 else v}" for k, v in fails.items()))
     text = "\n".join(head + out)
     print(text)
