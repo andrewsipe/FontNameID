@@ -147,7 +147,7 @@ import re
 from dataclasses import dataclass
 from typing import List, Tuple
 
-from FontCore.core_font_style_dictionaries import join_style_compounds
+from FontCore.core_font_style_dictionaries import join_mono_compounds, join_style_compounds
 
 
 # PascalCase tokenization pattern components:
@@ -507,7 +507,7 @@ def split_family_subfamily(
     base = _normalize_basename(input_name, strip_extension=strip_extension)
     left, right = _split_at_hyphen(base)
 
-    family = format_pascal_words(left)
+    family = join_mono_compounds(format_pascal_words(left))
     subfamily = join_style_compounds(format_pascal_words(right)) if right else ""
 
     return family, subfamily
@@ -552,7 +552,7 @@ def parse_filename(input_name: str, *, strip_extension: bool = True) -> ParsedNa
         base=base,
         family_raw=left,
         subfamily_raw=right,
-        family=format_pascal_words(left),
+        family=join_mono_compounds(format_pascal_words(left)),
         subfamily=join_style_compounds(format_pascal_words(right)) if right else "",
     )
 

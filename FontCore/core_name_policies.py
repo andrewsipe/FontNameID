@@ -54,6 +54,7 @@ from FontCore.core_string_utils import normalize_empty, is_empty, join_nonempty
 from FontCore.core_font_style_dictionaries import (
     ELIDABLE_VF_FILENAME_SLOPES,
     ITALIC_LIKE_SLOPE_TERMS,
+    STYLE_WORDS,
     ensure_weight_word,
 )
 
@@ -156,6 +157,9 @@ class RibbiDecision:
     notes: tuple[str, ...] = ()
 
 
+_SLOPE_LIKE = {"oblique", "slanted", "backslanted"}
+_KNOWN_STYLE_WORDS = {w.lower() for w in STYLE_WORDS}
+
 _FS_ITALIC, _FS_BOLD = 0x0001, 0x0020
 _MAC_BOLD, _MAC_ITALIC = 0x0001, 0x0002
 
@@ -169,11 +173,15 @@ def decide_ribbi(
 ) -> RibbiDecision:
     """Decide ID2 from the name, then the flags, then the italic angle.
 
+    The name wins. A style that says anything (a weight, Regular, a width) is never turned Italic by
+    the angle alone: a slanted upright-named design (a script, a banner) is not an italic variant.
+
     - Bold: the word Bold in the style. Flags decide only when the style says nothing at all.
       usWeightClass is not used (it is not always 700).
-    - Italic: the word Italic in the style, or a measured angle with |angle| >= ITALIC_ANGLE_FLOOR
-      (forward or back slants). Flags decide only when the style says nothing. A name that says Italic
-      is never demoted by a flat angle (a note is returned instead).
+    - Italic: the word Italic in the style. When the style says nothing at all, the flags decide, then a
+      measured angle with |angle| >= ITALIC_ANGLE_FLOOR (forward or back slants). A name that says
+      Italic is never demoted by a flat angle, and a slanted font whose name says nothing about slope
+      keeps Regular; both return a note instead.
     """
     text = normalize_empty(style) or ""
     words = {w.lower() for w in text.split()}
@@ -185,9 +193,19 @@ def decide_ribbi(
 
     notes: list[str] = []
     slanted = italic_angle is not None and abs(italic_angle) >= ITALIC_ANGLE_FLOOR
-    italic = "italic" in words or slanted
+    italic = "italic" in words
     if not italic and says_nothing:
         italic = bool(fs_selection & _FS_ITALIC or mac_style & _MAC_ITALIC)
+    # The angle can add Italic only when the style holds a word that might name a slope: an unknown
+    # word, or Oblique/Slanted/Backslanted. A style of only weight, width and Regular words is
+    # a plain upright name, so a slanted design keeps Regular (a script is not an italic variant).
+    might_name_slope = says_nothing or any(
+        w in _SLOPE_LIKE or w not in _KNOWN_STYLE_WORDS for w in words
+    )
+    if not italic and slanted and might_name_slope:
+        italic = True
+    if slanted and not italic:
+        notes.append(f"the italic angle is {italic_angle:g} degrees but the name does not say Italic")
     if "italic" in words and italic_angle is not None and not slanted:
         notes.append(f"the name says Italic but the italic angle is {italic_angle:g} degrees")
 

@@ -487,6 +487,11 @@ def join_style_compounds(text: str) -> str:
                 out.append(token.capitalize() + nxt_low)
                 i += 2
                 continue
+            if is_modifier and nxt_low == "mono":
+                # Semi + Mono is one word wherever it appears (SemiMono), like the width compounds
+                out.append(token.capitalize() + nxt.capitalize())
+                i += 2
+                continue
             if (is_modifier or is_x_run) and nxt_low in widths:
                 first = token if is_x_run else token.capitalize()
                 out.append(first + nxt.capitalize())
@@ -498,6 +503,24 @@ def join_style_compounds(text: str) -> str:
                 continue
         out.append(token)
         i += 1
+    return " ".join(out)
+
+
+def join_mono_compounds(text: str) -> str:
+    """Join "Semi Mono" (modifier + Mono) into "SemiMono" and leave everything else alone.
+
+    Used on family names, where the other style compounds must not be touched.
+    """
+    tokens = (text or "").split()
+    modifiers = {m.lower() for m in MODIFIERS}
+    out, i = [], 0
+    while i < len(tokens):
+        if i + 1 < len(tokens) and tokens[i].lower() in modifiers and tokens[i + 1].lower() == "mono":
+            out.append(tokens[i].capitalize() + "Mono")
+            i += 2
+        else:
+            out.append(tokens[i])
+            i += 1
     return " ".join(out)
 
 

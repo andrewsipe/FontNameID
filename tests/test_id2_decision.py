@@ -75,7 +75,7 @@ def test_a_name_that_says_italic_wins_over_a_flat_angle(tmp_path):
 
 @pytest.mark.parametrize("angle, id2", [(1.9, "Regular"), (-1.9, "Regular"), (2.0, "Italic"), (-2.0, "Italic")])
 def test_the_two_degree_floor(tmp_path, angle, id2):
-    font = _prepare(tmp_path / "Probe-Regular.ttf", angle=angle)
+    font = _prepare(tmp_path / "Probe-Oblique.ttf", angle=angle)
     _run(font, ids=(2,))
     assert _names_id2(font) == id2
 
@@ -138,3 +138,10 @@ def test_batch_reads_the_filename_for_id2_and_is_idempotent(tmp_path):
     assert _names_id2(oblique) == "Italic"
     _batch(tmp_path)
     assert {f.name: f.read_bytes() for f in fonts} == after_first
+
+
+@pytest.mark.parametrize("stem", ["Probe-Regular", "Probe-Bold", "Probe-Light", "Probe-Condensed"])
+def test_a_slanted_font_with_a_plain_upright_name_stays_upright(tmp_path, stem):
+    font = _prepare(tmp_path / f"{stem}.ttf", angle=-9.0)
+    _run(font, ids=(2,))
+    assert _names_id2(font) == ("Bold" if stem.endswith("Bold") else "Regular")
