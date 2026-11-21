@@ -86,3 +86,6 @@ temp_font_metadata.tmp
 
 # Generated URL list (not part of the project)
 raw_github_urls.txt
+
+# Local bench data (font names and paths from a private library)
+bench/_data/
