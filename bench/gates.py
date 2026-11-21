@@ -43,13 +43,13 @@ def f(v, d=0.0):
         return d
 
 
-def main(data: Path) -> None:
-    harvest = {r["rel_path"]: r for r in read(data / "harvest_sample.csv")}
+def main(data: Path, harvest_name: str = "harvest_sample.csv", work_name: str = "work", report_name: str = "gate_report.txt") -> None:
+    harvest = {r["rel_path"]: r for r in read(data / harvest_name)}
     for h in harvest.values():  # re-read the filename with the current parser, not the one the harvest ran with
         parsed = parse_filename(h["stem"] + h["ext"])
         h["style_fn"], h["family"] = parsed.subfamily, parsed.family
-    res = {r["rel_path"]: r for r in read(data / "work" / "results.csv")}
-    alone = read(data / "work" / "alone.csv")
+    res = {r["rel_path"]: r for r in read(data / work_name / "results.csv")}
+    alone = read(data / work_name / "alone.csv")
     rows = [(harvest[k], res[k]) for k in res]
     # -fp skips a filename with no style after a hyphen (nothing to read); those fonts keep their old names
     skipped = [(h, r) for h, r in rows if h["has_hyphen"] == "False" or not h["style_fn"].strip()]
@@ -172,8 +172,9 @@ def main(data: Path) -> None:
     head.append("gate summary: " + "  ".join(f"{k}:{'ok' if v == 0 else v}" for k, v in fails.items()))
     text = "\n".join(head + out)
     print(text)
-    (data / "gate_report.txt").write_text(text + "\n", encoding="utf-8")
+    (data / report_name).write_text(text + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":
-    main(Path(sys.argv[1]) if len(sys.argv) > 1 else Path("bench/_data"))
+    argv = sys.argv[1:]
+    main(Path(argv[0]) if argv else Path("bench/_data"), *(argv[1:4]))
