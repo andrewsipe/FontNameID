@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.3.0] - 2026-11-21
+
+**Names change.** Running 0.3.0 on fonts already named by 0.2.x will rewrite some names (in a 1,539-font sample about 19%
+of ID4s, 7% of ID1s, 6% of ID2s). A second run changes nothing. Run on copies first. Rules: FontCore `DECISIONS.md`.
+
+### Changed
+- **ID2 (style):** from the name first. The word `Italic` makes Italic; the italic angle only adds Italic when the style is
+  empty or names a slope (Oblique, Slanted, Backslant, Cursive). A slanted font with a plain upright name (a script) stays
+  Regular, with a note. `fsSelection` and `macStyle` flags follow ID2 and are synced even when the name didn't change.
+- **ID1:** drops only the exact words Regular, Italic and Bold; every other style word stays. Variable fonts keep `Variable`.
+- **ID4:** keeps `Regular` (`Probe Regular`, `Probe Regular Italic`).
+- **ID17:** always has a weight word. Regular is added only to an empty, width-only or Italic-only style; with an unknown
+  style word the tool leaves the style as is and says so (the word may be the weight).
+- Compounds: `Semi Bold` -> `Semibold`, `Semi Condensed` -> `SemiCondensed`, `Semi Mono` -> `SemiMono`.
+- Names with spaces split into words correctly (`-fp`), and `-fp` now works in `fontnameid batch`.
+- Fonts whose filename has no hyphen are skipped under `-fp` instead of being named from a guess.
+- FontCore 0.3.0 vendored.
+
+### Removed
+- The regular-equivalent word convention (Normal, Book, Roman as "Regular").
+
+### Added
+- `bench/`: a naming test bench (harvest, run on copies, gates for consistency, stability comparison). Font data is not committed.
+
 ## [0.2.3] - 2026-11-20
 
 ### Changed
