@@ -19,6 +19,7 @@ from fontTools.ttLib.tables._n_a_m_e import NameRecord
 
 import FontCore.core_console_styles as cs
 from FontCore.core_filename_parts_parser import parse_filename
+from FontCore.core_font_style_dictionaries import ensure_weight_word
 from FontCore.core_name_policies import (
     build_id4,
     normalize_style_and_slope_for_id1_id4,
@@ -89,27 +90,21 @@ except ImportError:
 
 
 def construct_full_name(family, modifier, style, slope):
-    """Construct the full font name from components"""
+    """Construct the full font name from components.
+
+    The full name says the weight: "Probe Regular", "Probe Regular Italic". When the style has no
+    weight word, Regular is added before any slope.
+    """
     parts = []
 
-    # Add family
     if family:
         parts.append(family)
 
-    # Add modifier if present
-    if modifier:
-        parts.append(modifier)
+    parts.append(ensure_weight_word(" ".join(p for p in (modifier, style) if p)))
 
-    # Add style if present and not Regular
-    if style and style != "Regular":
-        parts.append(style)
-
-    # Add slope if present
     if slope:
         parts.append(slope)
 
-    # Special case: if no style/slope and would just be family (+ modifier),
-    # it represents Regular style
     return " ".join(parts)
 
 
@@ -568,6 +563,7 @@ def process_file_wrapper(filepath, args, dry_run=False, stats=None, error_tracke
     norm_style, slope_effective = normalize_style_and_slope_for_id1_id4(
         use_style,
         args.slope,
+        keep_regular=True,
     )
 
     # Use normalized values

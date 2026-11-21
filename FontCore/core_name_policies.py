@@ -53,6 +53,7 @@ from FontCore.core_string_utils import normalize_empty, is_empty, join_nonempty
 from FontCore.core_font_style_dictionaries import (
     ELIDABLE_VF_FILENAME_SLOPES,
     ITALIC_LIKE_SLOPE_TERMS,
+    ensure_weight_word,
 )
 
 if TYPE_CHECKING:
@@ -172,11 +173,13 @@ def _extract_slope_from_style(style: str) -> tuple[str, str | None]:
 def normalize_style_and_slope_for_id1_id4(
     subfamily_style: str | None,
     slope: str | None,
+    *,
+    keep_regular: bool = False,
 ) -> tuple[str | None, str | None]:
     """Normalize a style string for ID1/ID4 policy.
 
-    - Remove Regular (the RIBBI word). Roman, Book, Normal, Plain, Medium, Light and Text are
-      ordinary style words and stay.
+    - Remove Regular (the RIBBI word) for ID1; ID4 passes keep_regular=True because its full name
+      says Regular. Roman, Book, Normal, Plain, Medium, Light and Text are ordinary style words and stay.
     - If Italic/Oblique/Slanted appear in style, move them into slope when slope is not set
     - Idempotent: can be executed repeatedly safely
     """
@@ -187,7 +190,8 @@ def normalize_style_and_slope_for_id1_id4(
         return None, slope
 
     style = subfamily_style
-    style, _ = _strip_token(RE_REGULAR, style)
+    if not keep_regular:
+        style, _ = _strip_token(RE_REGULAR, style)
 
     # Extract and remove slope terms if slope not already set
     slope_norm = slope
@@ -365,17 +369,24 @@ def is_elidable_vf_slope(slope: str | None) -> bool:
     return slope.strip().lower() in {s.lower() for s in ELIDABLE_VF_DISPLAY_SLOPES}
 
 
-def build_id1_from_variable_slots(slots: "VariableFilenameSlots") -> str:
-    """Construct ID1 from parsed variable-font filename slots."""
+def _variable_family_base(slots: "VariableFilenameSlots") -> str:
+    """Root family plus optical size and width, without the word Variable."""
     return (
         join_nonempty(slots.root_family, slots.optical, slots.width) or slots.root_family
     )
 
 
+def build_id1_from_variable_slots(slots: "VariableFilenameSlots") -> str:
+    """Construct ID1 from parsed variable-font filename slots.
+
+    "Variable" stays in ID1 (house convention, DECISIONS.md C4): it is part of what the font is.
+    """
+    return join_nonempty(_variable_family_base(slots), "Variable")
+
+
 def build_id4_from_variable_slots(slots: "VariableFilenameSlots") -> str:
     """Construct ID4 from parsed variable-font filename slots."""
-    base = build_id1_from_variable_slots(slots)
-    parts: list[str | None] = [base, "Variable", slots.bespoke]
+    parts: list[str | None] = [_variable_family_base(slots), "Variable", slots.bespoke]
     if slots.slope and not is_elidable_vf_slope(slots.slope):
         parts.append(slots.slope)
     return join_nonempty(*parts)
@@ -411,11 +422,13 @@ def build_id1(
     # Variable font policy: Strip "Variable" tokens from family name
     if is_variable:
         if variable_family_override:
-            # Full name from filename: strip only Variable token, keep prefix/suffix (e.g. "Font Variable Black" -> "Font Black")
-            return strip_only_variable_token(variable_family_override) or variable_family_override
+            # Full name from filename: keep one "Variable" and any prefix/suffix, drop pairing markers
+            # (e.g. "Font Variable Black" stays, "Font VariableItalic" -> "Font Variable")
+            kept = keep_one_variable_token(variable_family_override)
+            return kept if kept and "variable" in kept.lower() else join_nonempty(kept, "Variable")
         base = family
         # Asterisks are preserved in family names
-        return strip_variable_tokens(base) or base
+        return join_nonempty(strip_variable_tokens(base) or base, "Variable")
 
     style_eff = style
     slope_eff = slope
@@ -480,10 +493,15 @@ def build_id4(
         style_eff, slope_eff = normalize_style_and_slope_for_id1_id4(
             style_eff,
             slope_eff,
+            keep_regular=True,
         )
 
+    # ID4 names the weight: "Probe Regular", "Probe Regular Italic" (house convention, DECISIONS.md C1)
+    style_eff = ensure_weight_word(join_nonempty(modifier, style_eff) or "")
+    modifier = None
+
     # Asterisks are preserved in ID4 (no sanitization needed)
-    return join_nonempty(family, modifier, style_eff, slope_eff)
+    return join_nonempty(family, style_eff, slope_eff)
 
 
 def build_id16(
@@ -513,11 +531,10 @@ def build_id17(
 ) -> str:
     """Construct ID17 (Typographic Subfamily).
 
-    ID17 retains Regular/Italic tokens; do not apply filename normalization here.
-    Fallback to "Regular" if empty.
+    ID17 keeps Regular and always carries a weight word: a regular italic is "Regular Italic", and
+    "Wide Italic" becomes "Wide Regular Italic". No filename normalization is applied here.
     """
-    out = join_nonempty(modifier, style, slope)
-    return out if out else "Regular"
+    return ensure_weight_word(join_nonempty(modifier, style, slope) or "")
 
 
 __all__ = [
@@ -553,6 +570,7 @@ __all__ = [
     "ELIDABLE_VF_DISPLAY_SLOPES",
     "split_variable_subfamily",
     "strip_only_variable_token",
+    "keep_one_variable_token",
     "strip_variable_tokens",
     "variable_filename_fragment",
     "build_id17_variable_default",
@@ -763,6 +781,22 @@ def split_variable_subfamily(subfamily: str | None) -> tuple[str, str]:
         else ""
     )
     return prefix, suffix
+
+
+def keep_one_variable_token(text: str | None) -> str | None:
+    """Reduce Variable / VariableItalic / Variable Upright / VariableRoman to a single "Variable".
+
+    Used for ID1 of a variable font: the word stays, the pairing marker (Italic, Upright, Roman) goes.
+    """
+    text = normalize_empty(text)
+    if is_empty(text):
+        return None
+    s = re.sub(
+        r"(?i)(?<![A-Za-z0-9])Variable(?:\s+(?:Italic|Upright|Roman)|(?:Italic|Upright|Roman))?(?![A-Za-z0-9])",
+        "Variable",
+        str(text),
+    )
+    return normalize_empty(" ".join(s.split()))
 
 
 def strip_only_variable_token(text: str | None) -> str | None:

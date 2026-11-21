@@ -381,6 +381,61 @@ def generate_all_optical_variations() -> set[str]:
     return set(OPTICAL_BASES)
 
 
+# Words that fill the weight position of a style name. "Roman" and the regular equivalents count: they are
+# how a family names its upright, so nothing needs adding. "Text" is a weight only when it stands alone;
+# next to another word it is an optical size (see has_weight_word).
+WEIGHT_WORDS = frozenset(
+    {
+        "hairline", "thin", "extralight", "ultralight", "light", "semilight", "demilight",
+        "book", "regular", "normal", "plain", "standard", "roman", "medium",
+        "demibold", "semibold", "bold", "extrabold", "ultrabold", "superbold",
+        "black", "heavy", "extrablack", "ultrablack", "extraheavy", "ultraheavy", "fat", "super", "ultra",
+    }
+    | {f"{m.lower()}{w.lower()}" for m in MODIFIERS for w in WEIGHT_BASES}
+    | {str(n) for n in range(100, 1100, 100)}
+)
+
+_SLOPE_TOKENS = frozenset(s.lower() for s in SLOPE_BASES)
+
+
+def has_weight_word(text: str) -> bool:
+    """True when the style text has a word in the weight position (Bold, Semibold, Regular, Roman, 400...).
+
+    `Text` counts only when it is the only word: with another word it is an optical size.
+    """
+    tokens = [t.lower() for t in (text or "").split()]
+    if not tokens:
+        return False
+    if tokens == ["text"]:
+        return True
+    return any(t in WEIGHT_WORDS for t in tokens)
+
+
+def ensure_weight_word(text: str) -> str:
+    """Add Regular when the style has no weight word, before any slope: "Wide Italic" -> "Wide Regular Italic".
+
+    Empty text becomes "Regular". Text that already has a weight word is returned unchanged, so the
+    function is safe to run twice.
+    """
+    text = " ".join((text or "").split())
+    if not text:
+        return "Regular"
+    if has_weight_word(text):
+        return text
+    tokens = text.split()
+    lowered = [t.lower() for t in tokens]
+    slope_at = next((i for i, t in enumerate(lowered) if t in _SLOPE_TOKENS), None)
+    if slope_at is None and "back" in lowered:  # "Back Slanted"
+        slope_at = lowered.index("back")
+    if slope_at is not None and slope_at > 0 and lowered[slope_at - 1] == "back":
+        slope_at -= 1
+    if slope_at is None:
+        tokens.append("Regular")
+    else:
+        tokens.insert(slope_at, "Regular")
+    return " ".join(tokens)
+
+
 def join_style_compounds(text: str) -> str:
     """Join the pieces of compound style words that PascalCase splitting pulled apart.
 
