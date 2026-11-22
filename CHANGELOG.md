@@ -1,6 +1,10 @@
 # Changelog
 
-## [Unreleased]
+## [0.5.0] - 2026-11-22
+
+FontCore 0.4.1 vendored (see `FontCore/VENDOR.md`).
+
+**Behavior change:** IDs 8 to 14 no longer write a placeholder when you give no value (see Changed). Names you do set are written as before.
 
 ### Changed
 - Install and update instructions use `uv tool install` / `uv tool upgrade` (pipx is no longer mentioned). The README's old pipx section, its wrong package name (`font-nameid`) and the out-of-date "FontCore dependency" section are replaced: FontCore is vendored, so nothing else is installed.
