@@ -401,18 +401,18 @@ def process_files(file_paths, script_args, batch_context=False):
     operations = []
     if script_args.string:
         operations.append(
-            f"Replace nameID 16 (Typographic Family) with string override: '{script_args.string}'"
+            f"Set the typographic family (nameID 16) to exactly: {script_args.string}"
         )
     else:
         source_parts = []
         if _flag_provided("", "--family"):
             source_parts.append(f"family override: '{script_args.family}'")
         if script_args.filename_parser is not None:
-            source_parts.append("filename parser")
+            source_parts.append("the filename")
         if not source_parts:
             source_parts.append(f"default values: '{script_args.family}'")
         operations.append(
-            f"Replace nameID 16 (Typographic Family) using {', '.join(source_parts)}"
+            f"Set the typographic family (nameID 16) using {', '.join(source_parts)}"
         )
 
     if getattr(script_args, "empty_fields_only", False):
@@ -511,7 +511,7 @@ def main():
 
     parser = argparse.ArgumentParser(
         allow_abbrev=False,
-        description="Replace nameID='16' (Typographic Family) records in font files",
+        description="Set the typographic family (nameID 16) in font files",
         epilog="Supported formats: TTF, OTF, WOFF, WOFF2, TTX",
     )
 
@@ -520,34 +520,34 @@ def main():
         "-r",
         "--recursive",
         action="store_true",
-        help="Recurse into subdirectories when scanning directories",
+        help="include subfolders",
     )
 
     parser.add_argument(
         "--family",
         default=None,
-        help="Typographic family name",
+        help="typographic family name",
     )
 
     parser.add_argument(
         "-str",
         "--string",
-        help="Override nameID=16 content with exact string (supersedes all other options)",
+        help="set the typographic family (nameID 16) to exactly this text; other options are ignored",
     )
 
     parser.add_argument(
         "-n",
         "--dry-run",
         action="store_true",
-        help="Show what would be done without making changes",
+        help="preview only; change nothing",
     )
     parser.add_argument(
         "--empty-fields-only",
         action="store_true",
         dest="empty_fields_only",
         help=(
-            "Create nameID 16 if missing and fill blank entries only; "
-            "do not overwrite non-blank Windows English text"
+            "add the typographic family (nameID 16) if it is missing, or fill it if blank; "
+            "leave existing Windows English text alone"
         ),
     )
 
@@ -559,8 +559,8 @@ def main():
         nargs="?",
         const="",
         help=(
-            "Derive family from filename. With a value, use that sample path for all files; "
-            "with no value, derive per-file from its own path. -f overrides; -fp only fills missing."
+            "read the family from the filename: from the sample path you give after -fp for every font, "
+            "or from each font's own filename if you give none. --family wins; -fp only fills what is missing"
         ),
     )
 
@@ -568,14 +568,14 @@ def main():
         "-dmr",
         "--delete-mac-records",
         action="store_true",
-        help="Remove Mac name records (platformID=1) before processing",
+        help="remove all Mac name records (platform 1) before processing",
     )
 
     parser.add_argument(
         "-y",
         "--yes",
         action="store_true",
-        help="Auto-confirm all prompts",
+        help="skip the confirmation",
     )
 
     args = parser.parse_args()

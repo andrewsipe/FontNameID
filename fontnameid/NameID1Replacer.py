@@ -489,7 +489,7 @@ def process_files(file_paths, script_args, batch_context=False):
     operations = []
     if script_args.string:
         operations.append(
-            f"Replace nameID 1 (Font Family) with string override: '{script_args.string}'"
+            f"Set the family name (nameID 1) to exactly: {script_args.string}"
         )
     else:
         source_parts = []
@@ -502,15 +502,15 @@ def process_files(file_paths, script_args, batch_context=False):
         if _flag_provided("-sl", "--slope"):
             source_parts.append(f"slope override: '{script_args.slope}'")
         if script_args.filename_parser is not None:
-            source_parts.append("filename parser")
+            source_parts.append("the filename")
         if not source_parts:
             source_parts.append("default values")
         operations.append(
-            f"Replace nameID 1 (Font Family) using {', '.join(source_parts)}"
+            f"Set the family name (nameID 1) using {', '.join(source_parts)}"
         )
 
     if getattr(script_args, "empty_fields_only", False):
-        operations.append("Only fill blank nameID 1 entries (--empty-fields-only)")
+        operations.append("Only fill the blank family name record (--empty-fields-only)")
 
     # NameID1Replacer doesn't support --empty-fields-only
 
@@ -627,7 +627,7 @@ def main():
 
     parser = argparse.ArgumentParser(
         allow_abbrev=False,
-        description="Replace nameID='1' (Font Family) records in font files",
+        description="Set the family name (nameID 1) in font files",
         epilog="Supported formats: TTF, OTF, WOFF, WOFF2, TTX",
     )
 
@@ -636,46 +636,46 @@ def main():
         "-r",
         "--recursive",
         action="store_true",
-        help="Recurse into subdirectories when scanning directories",
+        help="include subfolders",
     )
 
-    parser.add_argument("--family", default=None, help="Family name")
+    parser.add_argument("--family", default=None, help="family name")
 
     parser.add_argument(
-        "-m", "--modifier", help="Optional modifier (e.g., 'Condensed', 'Extended')"
+        "-m", "--modifier", help="modifier, for example Condensed or Extended"
     )
 
     parser.add_argument(
         "-s",
         "--style",
         default=None,
-        help="Optional style (e.g., 'Light', 'Bold') - 'Regular' is excluded",
+        help="style words after the family, for example Light (Regular, Italic and Bold are left out of the family name)",
     )
 
     parser.add_argument(
         "-sl",
         "--slope",
-        help="Optional slope (e.g., 'Slanted', 'Oblique') - 'Italic' is excluded",
+        help="slope words, for example Slanted or Oblique (Italic is left out of the family name)",
     )
 
     parser.add_argument(
         "-str",
         "--string",
-        help="Override nameID=1 content with exact string (supersedes all other options)",
+        help="set the family name (nameID 1) to exactly this text; other options are ignored",
     )
 
     parser.add_argument(
         "-n",
         "--dry-run",
         action="store_true",
-        help="Show what would be done without making changes",
+        help="preview only; change nothing",
     )
 
     parser.add_argument(
         "-y",
         "--yes",
         action="store_true",
-        help="Auto-confirm all prompts",
+        help="skip the confirmation",
     )
 
     add_weight_override_args(parser)
@@ -684,21 +684,21 @@ def main():
         "-fp",
         "--filename-parser",
         action="store_true",
-        help="Enable filename parsing (for BatchRunner compatibility)",
+        help="read the family and style from each filename",
     )
 
     parser.add_argument(
         "-dmr",
         "--delete-mac-records",
         action="store_true",
-        help="Remove Mac name records (platformID=1) before processing",
+        help="remove all Mac name records (platform 1) before processing",
     )
 
     parser.add_argument(
         "--empty-fields-only",
         action="store_true",
         dest="empty_fields_only",
-        help="Only fill blank Windows English nameID 1; do not overwrite existing text",
+        help="fill only the blank Windows English family name record (nameID 1); leave existing text alone",
     )
 
     args = parser.parse_args()

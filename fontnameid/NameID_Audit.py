@@ -31,6 +31,7 @@ from pathlib import Path
 from fontTools.ttLib import TTFont
 
 from FontCore.core_file_collector import SUPPORTED_EXTENSIONS, collect_font_files
+from fontnameid.nameid_common import plural
 from FontCore.core_filename_parts_parser import parse_filename
 from FontCore.core_font_style_dictionaries import (
     ACCEPTABLE_COMPOUND_SLOPES,
@@ -584,13 +585,13 @@ def _parse_ids(raw: str) -> set[int]:
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Audit font NameIDs against filename-parser expectations and/or "
-            "known mislabel patterns; optionally collect offenders for reprocessing."
+            "Check each font's name records against what its filename implies and against known "
+            "mislabels; optionally copy the fonts that fail into a folder."
         )
     )
     parser.add_argument("paths", nargs="*", help="Font files or directories to scan")
     parser.add_argument(
-        "-r", "--recursive", action="store_true", help="Recurse into subdirectories"
+        "-r", "--recursive", action="store_true", help="include subfolders"
     )
     parser.add_argument("--limit", type=int, default=None, help="Scan at most N files")
     parser.add_argument(
@@ -606,8 +607,7 @@ def main() -> int:
         "--expect-fp",
         action="store_true",
         help=(
-            "Compare live ID1/4/17 to Names -fp expectations "
-            "(filename parser + policies, no Italic injection)"
+            "compare the family name, full name and typographic style with what the filename implies"
         ),
     )
     parser.add_argument(
@@ -760,9 +760,9 @@ def main() -> int:
                 static_only=args.static_only,
             )
             print(
-                f"Offenders: {offender_count:,} file(s) across "
+                f"Offenders: {plural(offender_count, 'file')} across "
                 f"{len(family_counts):,} families → "
-                f"{len(paths):,} file(s) after family expansion"
+                f"{plural(len(paths), 'file')} after family expansion"
             )
 
         ok, failed = collect_offenders(
@@ -775,7 +775,7 @@ def main() -> int:
         mode = "hardlink" if args.link else "copy"
         action = "Would collect" if args.dry_run else "Collected"
         print(
-            f"\n{action} {ok:,} unique file(s) via {mode} → {args.collect}"
+            f"\n{action} {plural(ok, 'unique file')} via {mode} → {args.collect}"
             + (f"  ({failed:,} failed)" if failed else "")
         )
         if args.whole_family and family_counts and args.show > 0:

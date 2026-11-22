@@ -403,20 +403,20 @@ def process_files(file_paths, script_args, batch_context=False):
     operations = []
     if script_args.string:
         operations.append(
-            f"Replace nameID 6 (PostScript Name) with exact string: '{script_args.string}'"
+            f"Set the PostScript name (nameID 6) to exactly: {script_args.string}"
         )
     else:
         if script_args.postscript:
             operations.append(
-                f"Replace nameID 6 (PostScript Name) with: {script_args.postscript}"
+                f"Set the PostScript name (nameID 6) to: {script_args.postscript}"
             )
         else:
             operations.append(
-                "Replace nameID 6 (PostScript Name) with: auto-detect from filename"
+                "Set the PostScript name (nameID 6) from: the filename"
             )
 
     if getattr(script_args, "empty_fields_only", False):
-        operations.append("Only fill blank nameID 6 entries (--empty-fields-only)")
+        operations.append("Only fill the blank PostScript name record (--empty-fields-only)")
 
     # Define the file processing function for this script
     def process_single_file(filepath, args, dry_run, stats=None):
@@ -469,7 +469,7 @@ def main():
 
     parser = argparse.ArgumentParser(
         allow_abbrev=False,
-        description="Replace nameID='6' records in font files with the filename",
+        description="Set the PostScript name (nameID 6) in font files from the filename",
         epilog="Supported formats: TTF, OTF, WOFF, WOFF2, TTX",
     )
 
@@ -478,7 +478,7 @@ def main():
         "-r",
         "--recursive",
         action="store_true",
-        help="Recurse into subdirectories when scanning directories",
+        help="include subfolders",
     )
 
     parser.add_argument(
@@ -490,42 +490,42 @@ def main():
     parser.add_argument(
         "-str",
         "--string",
-        help="Override nameID=6 content with exact string (supersedes all other options)",
+        help="set the PostScript name (nameID 6) to exactly this text; other options are ignored",
     )
 
     parser.add_argument(
         "-n",
         "--dry-run",
         action="store_true",
-        help="Show what would be done without making changes",
+        help="preview only; change nothing",
     )
 
     parser.add_argument(
         "-y",
         "--yes",
         action="store_true",
-        help="Auto-confirm all prompts",
+        help="skip the confirmation",
     )
 
     parser.add_argument(
         "-fp",
         "--filename-parser",
         action="store_true",
-        help="Enable filename parsing (for BatchRunner compatibility)",
+        help="accepted so the same flags work in fontnameid batch; no effect on this ID",
     )
 
     parser.add_argument(
         "-dmr",
         "--delete-mac-records",
         action="store_true",
-        help="Remove Mac name records (platformID=1) before processing",
+        help="remove all Mac name records (platform 1) before processing",
     )
 
     parser.add_argument(
         "--empty-fields-only",
         action="store_true",
         dest="empty_fields_only",
-        help="Only fill blank Windows English nameID 6; do not overwrite existing text",
+        help="fill only the blank Windows English PostScript name record (nameID 6); leave existing text alone",
     )
 
     args = parser.parse_args()

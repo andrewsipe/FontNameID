@@ -65,8 +65,7 @@ class StringSpec:
     short_label: str  # shown in the workflow header and preflight checklist
     short_flag: str  # e.g. "-man"
     long_flag: str  # e.g. "--manufacturer"
-    default: str  # placeholder written when no value flag is given
-    value_help: str  # e.g. "Manufacturer name"
+    noun: str  # what the record holds, in plain words: "manufacturer name", "vendor URL"
     explicit_aliases: Tuple[str, ...]  # names accepted in --idN:<alias>=value
 
     @property
@@ -78,21 +77,21 @@ SPECS: Dict[int, StringSpec] = {
     s.name_id: s
     for s in (
         StringSpec(8, "Manufacturer", "Manufacturer", "-man", "--manufacturer",
-                   "manufacturer", "Manufacturer name", ("manufacturer", "man")),
+                   "manufacturer name", ("manufacturer", "man")),
         StringSpec(9, "Designer", "Designer", "-d", "--designer",
-                   "designer", "Designer name", ("designer", "d")),
+                   "designer name", ("designer", "d")),
         StringSpec(10, "Description", "Description", "-desc", "--description",
-                   "description", "Description text", ("description", "desc")),
+                   "description", ("description", "desc")),
         StringSpec(11, "Vendor URL", "Vendor URL", "-vu", "--vendor-url",
-                   "https://vendorurl.com", "Vendor URL",
+                   "vendor URL",
                    ("vendor_url", "vendor-url", "vendorurl", "vu")),
         StringSpec(12, "Designer URL", "Designer URL", "-du", "--designer-url",
-                   "https://designerurl.com", "Designer URL",
+                   "designer URL",
                    ("designer_url", "designer-url", "designerurl", "du")),
         StringSpec(13, "License Description", "License", "-l", "--license",
-                   "license", "License description text", ("license", "l")),
+                   "license description", ("license", "l")),
         StringSpec(14, "License URL", "License URL", "-lu", "--license-url",
-                   "https://vendorurl.com/license", "License URL",
+                   "license URL",
                    ("license_url", "license-url", "licenseurl", "lu")),
     )
 }
@@ -289,18 +288,29 @@ def make_replacer(name_id: int) -> SimpleNamespace:
         Returns:
             int: 0 for success, 1 for error, 2 for quit
         """
+        if not script_args.string and not getattr(script_args, spec.dest, None):
+            headline = f"No {spec.noun} given"
+            advice = f"Set it with {spec.short_flag} TEXT, or use -str for the exact text. Nothing was changed."
+            message = f"{headline}. {advice}"
+            cs.StatusIndicator("error").add_message(headline).with_explanation(advice).emit(console)
+            if batch_context:
+                return {
+                    "exit_code": 1, "updated": 0, "unchanged": 0, "errors": 1,
+                    "warnings": [], "error_messages": [message],
+                }
+            return 1
+
         operations = []
         if script_args.string:
             operations.append(
-                f"Replace nameID {nid} ({spec.short_label}) with exact string: "
-                f"'{script_args.string}'"
+                f"Set the {spec.noun} (nameID {nid}) to exactly: {script_args.string}"
             )
         else:
-            value = getattr(script_args, spec.dest) or "user input"
-            operations.append(f"Replace nameID {nid} ({spec.short_label}) with: {value}")
+            value = getattr(script_args, spec.dest)
+            operations.append(f"Set the {spec.noun} (nameID {nid}) to: {value}")
 
         if getattr(script_args, "empty_fields_only", False):
-            operations.append(f"Only fill blank nameID {nid} entries (--empty-fields-only)")
+            operations.append(f"Only fill the blank {spec.noun} record (--empty-fields-only)")
 
         def process_single_file(filepath, args, dry_run, stats=None):
             return process_file(
@@ -329,7 +339,7 @@ def make_replacer(name_id: int) -> SimpleNamespace:
     def build_parser() -> argparse.ArgumentParser:
         parser = argparse.ArgumentParser(
             allow_abbrev=False,
-            description=f"Replace nameID='{nid}' ({spec.label}) records in font files",
+            description=f"Set the {spec.noun} (nameID {nid}) in font files",
             epilog="Supported formats: TTF, OTF, WOFF, WOFF2, TTX",
         )
         parser.add_argument("paths", nargs="+", help="Font files or directories to process")
@@ -337,45 +347,44 @@ def make_replacer(name_id: int) -> SimpleNamespace:
             "-r",
             "--recursive",
             action="store_true",
-            help="Recurse into subdirectories when scanning directories",
+            help="include subfolders",
         )
         parser.add_argument(
             spec.short_flag,
             spec.long_flag,
-            default=spec.default,
-            help=f"{spec.value_help} (default: '{spec.default}')",
+            help=f"{spec.noun} to write",
         )
         parser.add_argument(
             "-str",
             "--string",
-            help=f"Override nameID={nid} content with exact string (supersedes all other options)",
+            help=f"set the {spec.noun} (nameID {nid}) to exactly this text; other options are ignored",
         )
         parser.add_argument(
             "-n",
             "--dry-run",
             action="store_true",
-            help="Show what would be done without making changes",
+            help="preview only; change nothing",
         )
         parser.add_argument(
-            "-y", "--yes", action="store_true", help="Auto-confirm all prompts"
+            "-y", "--yes", action="store_true", help="skip the confirmation"
         )
         parser.add_argument(
             "-fp",
             "--filename-parser",
             action="store_true",
-            help="Enable filename parsing (for BatchRunner compatibility)",
+            help="accepted so the same flags work in fontnameid batch; no effect on this ID",
         )
         parser.add_argument(
             "-dmr",
             "--delete-mac-records",
             action="store_true",
-            help="Remove Mac name records (platformID=1) before processing",
+            help="remove all Mac name records (platform 1) before processing",
         )
         parser.add_argument(
             "--empty-fields-only",
             action="store_true",
             dest="empty_fields_only",
-            help=f"Only fill blank Windows English nameID {nid}; do not overwrite existing text",
+            help=f"fill only the blank Windows English {spec.noun} record (nameID {nid}); leave existing text alone",
         )
         return parser
 

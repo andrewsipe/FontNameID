@@ -22,26 +22,24 @@ COPYRIGHT_NOTICE_FORMAT = (
 TRADEMARK_NOTICE_FORMAT = "{family} is a trademark of {holder}."
 
 HELP_HOLDER_ARG = (
-    "Override rights holder for the notice. When omitted, each font is read for "
-    "nameID 8 (Manufacturer) and nameID 9 (Designer): both present and different "
-    "→ '{manufacturer} & {designer}'; one present → that value; identical values "
-    "→ deduplicated to a single name; neither → 'designer'."
+    "rights holder for the notice. If you don't give one, it is the font's manufacturer "
+    "(nameID 8) and designer (nameID 9): both if they differ, one name if they match, "
+    "just the one that is set otherwise, and the word designer if neither is"
 )
 
 HELP_COPYRIGHT_YEAR_ARG = (
-    "Copyright year for all files. When omitted, resolved per file in order: "
-    "--current-year, then head.created, then a year parsed from existing nameID 0, "
-    "then the current calendar year."
+    "copyright year for every font. If you don't give one, each font uses, in order: "
+    "--current-year, its creation date, the year in its existing copyright notice "
+    "(nameID 0), then the current year"
 )
 
 HELP_COPYRIGHT_CURRENT_YEAR_ARG = (
-    "Use the current calendar year in the copyright notice (overrides automatic "
-    "year resolution except --year)."
+    "use the current year instead of the year found in the font (--year wins)"
 )
 
 HELP_TRADEMARK_FAMILY_ARG = (
-    "Trademark family name. When omitted, resolved per file from nameID 16 "
-    "(Typographic Family), then nameID 1 (Font Family), then the filename stem."
+    "trademark family name. If you don't give one, each font uses its typographic "
+    "family (nameID 16), then its family name (nameID 1), then its filename"
 )
 
 COPYRIGHT_ARGPARSE_EPILOG = f"""Notice format (unless -str/--string is used):
@@ -53,7 +51,7 @@ Rights holder ({{holder}}) when -d/--designer is omitted:
   3. Literal "{PLACEHOLDER_RIGHTS_HOLDER}" if neither exists
 
 Year ({{year}}) when --year and --current-year are omitted:
-  1. head table created timestamp
+  1. the font's creation date
   2. Year parsed from existing Windows English nameID 0
   3. Current calendar year
 
@@ -191,11 +189,8 @@ def construct_copyright(year: int, holder: str) -> str:
 
 def describe_holder_source(holder_override: str | None) -> str:
     if is_explicit_rights_holder_override(holder_override):
-        return f"holder override: '{str(holder_override).strip()}'"
-    return (
-        "holder per file from nameID 8 & 9 "
-        "('{manufacturer} & {designer}' when both differ)"
-    )
+        return f"rights holder: {str(holder_override).strip()} (-d)"
+    return "rights holder from each font's manufacturer and designer names (nameIDs 8 and 9)"
 
 
 def describe_copyright_year_source(
@@ -204,16 +199,16 @@ def describe_copyright_year_source(
     use_current_year: bool = False,
 ) -> str:
     if use_current_year:
-        return "year: current calendar year (--current-year)"
+        return "year: the current year (--current-year)"
     if manual_year is not None:
         return f"year: {manual_year} (--year)"
-    return "year per file: head.created → existing nameID 0 → current year"
+    return "year from each font's creation date, then its existing copyright notice, then the current year"
 
 
 def describe_trademark_family_source(family_override: str | None) -> str:
     if family_override and str(family_override).strip():
-        return f"family override: '{str(family_override).strip()}'"
-    return "family per file: nameID 16 → nameID 1 → filename stem"
+        return f"family: {str(family_override).strip()} (--family)"
+    return "family from each font's typographic family (nameID 16), then its family name (nameID 1), then its filename"
 
 
 def extract_year_from_copyright(text: str | None) -> int | None:

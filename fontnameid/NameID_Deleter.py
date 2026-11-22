@@ -18,6 +18,7 @@ from fontTools.ttLib import TTFont
 # ruff: noqa: E402
 
 import FontCore.core_console_styles as cs
+from fontnameid.nameid_common import plural
 from FontCore.core_file_collector import collect_font_files, SUPPORTED_EXTENSIONS
 from FontCore.core_nameid_replacer_base import (
     show_file_list,
@@ -123,12 +124,12 @@ def process_ttx_file(
             )
             for name_id, count in removed_by_id.items():
                 if count > 0:
-                    indicator.add_item(f"nameID {name_id}: {count} record(s)")
+                    indicator.add_item(f"nameID {name_id}: {plural(count, 'record')}")
             if removed_mac_count > 0:
-                indicator.add_item(f"Macintosh records: {removed_mac_count}")
+                indicator.add_item(f"Mac name records: {removed_mac_count}")
             if removed_non_windows_english_count > 0:
                 indicator.add_item(
-                    f"Non-Windows/English records: {removed_non_windows_english_count}"
+                    f"Name records other than Windows English: {removed_non_windows_english_count}"
                 )
             indicator.emit(console)
 
@@ -157,7 +158,7 @@ def process_ttx_file(
                 ).emit(console)
             if delete_mac:
                 cs.StatusIndicator("info").add_message(
-                    "Searched for Macintosh records"
+                    "Searched for Mac name records"
                 ).emit(console)
             if keep_windows_english:
                 cs.StatusIndicator("info").add_message(
@@ -236,12 +237,12 @@ def process_binary_font(
             )
             for name_id, count in removed_by_id.items():
                 if count > 0:
-                    indicator.add_item(f"nameID {name_id}: {count} record(s)")
+                    indicator.add_item(f"nameID {name_id}: {plural(count, 'record')}")
             if removed_mac_count > 0:
-                indicator.add_item(f"Macintosh records: {removed_mac_count}")
+                indicator.add_item(f"Mac name records: {removed_mac_count}")
             if removed_non_windows_english_count > 0:
                 indicator.add_item(
-                    f"Non-Windows/English records: {removed_non_windows_english_count}"
+                    f"Name records other than Windows English: {removed_non_windows_english_count}"
                 )
             indicator.emit(console)
 
@@ -262,7 +263,7 @@ def process_binary_font(
                 ).emit(console)
             if delete_mac:
                 cs.StatusIndicator("info").add_message(
-                    "Searched for Macintosh records"
+                    "Searched for Mac name records"
                 ).emit(console)
             if keep_windows_english:
                 cs.StatusIndicator("info").add_message(
@@ -418,34 +419,34 @@ def main() -> None:
         epilog="""Supported formats: TTF, OTF, WOFF, WOFF2, TTX.
 
 Presets:
-  Clean        - Remove Macintosh records and FontSquirrel records (nameIDs 200,201,202,203,55555)
-  LegalClean   - Remove legal records (nameIDs 13,14) 
-  MacClean     - Remove all Macintosh records (platformID=1)
-  FontSquirrel - Remove FontSquirrel records (nameIDs 200,201,202,203,55555)
+  Clean        - remove Mac name records and FontSquirrel records (nameIDs 200, 201, 202, 203, 55555)
+  LegalClean   - remove the license records (nameIDs 13, 14)
+  MacClean     - remove all Mac name records (platform 1)
+  FontSquirrel - remove the FontSquirrel name records (nameIDs 200, 201, 202, 203, 55555)
 
 Examples:
-  python3 NameID_Deleter.py Clean fonts/           # Use Clean preset
-  python3 NameID_Deleter.py --ids 8,9 fonts/      # Remove specific nameIDs
-  python3 NameID_Deleter.py -dmr fonts/           # Remove Macintosh records""",
+  fontnameid delete Clean fonts/           # use the Clean preset
+  fontnameid delete --ids 8,9 fonts/      # remove nameIDs 8 and 9
+  fontnameid delete -dmr fonts/           # remove Mac name records""",
     )
     parser.add_argument("paths", nargs="+", help="Font files or directories to process")
     parser.add_argument(
         "-r",
         "--recursive",
         action="store_true",
-        help="Recurse into subdirectories when scanning directories",
+        help="include subfolders",
     )
     parser.add_argument(
         "-n",
         "--dry-run",
         action="store_true",
-        help="Show actions without writing",
+        help="preview only; change nothing",
     )
     parser.add_argument(
         "-y",
         "--yes",
         action="store_true",
-        help="Auto-confirm writes",
+        help="skip the confirmation",
     )
     parser.add_argument(
         "--ids",
@@ -457,19 +458,19 @@ Examples:
         "-dmr",
         "--delete-mac-records",
         action="store_true",
-        help="Delete ALL Macintosh-encoded records (platformID=1)",
+        help="remove all Mac name records (platform 1)",
     )
     parser.add_argument(
         "-fs",
         "--fontsquirrel",
         action="store_true",
-        help="Remove FontSquirrel-specific nameIDs: 200, 201, 202, 203, 55555",
+        help="remove the FontSquirrel name records (nameIDs 200, 201, 202, 203, 55555)",
     )
     parser.add_argument(
         "-kwe",
         "--keep-windows-english",
         action="store_true",
-        help="Keep only Windows/English/Latin encoded records (platformID=3, platEncID=1, langID=0x409), remove all others",
+        help="keep only the Windows English name records (platform 3, encoding 1, language 0x409); remove all others",
     )
     args = parser.parse_args()
 

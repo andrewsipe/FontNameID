@@ -625,9 +625,7 @@ def process_files(file_paths, script_args, batch_context=False):
     # Build operations list for preflight checklist
     operations = []
     if script_args.string:
-        operations.append(
-            cs.fmt_replacement_operation(4, "Full Font Name", "string override")
-        )
+        operations.append(f"Set the full name (nameID 4) to exactly: {script_args.string}")
     else:
         source_parts = []
         if _flag_provided("", "--family"):
@@ -639,15 +637,13 @@ def process_files(file_paths, script_args, batch_context=False):
         if script_args.slope:
             source_parts.append("slope")
         if script_args.filename_parser is not None:
-            source_parts.append("filename parser")
+            source_parts.append("the filename")
         if not source_parts:
-            source_parts.append("default values")
-        operations.append(
-            cs.fmt_replacement_operation(4, "Full Font Name", ", ".join(source_parts))
-        )
+            source_parts.append("the given values")
+        operations.append(f"Set the full name (nameID 4) using {', '.join(source_parts)}")
 
     if getattr(script_args, "empty_fields_only", False):
-        operations.append("Only fill blank nameID 4 entries (--empty-fields-only)")
+        operations.append("Only fill the blank full name record (--empty-fields-only)")
 
     # Use the base module workflow
     result = run_workflow(
@@ -697,7 +693,7 @@ def main():
 
     parser = argparse.ArgumentParser(
         allow_abbrev=False,
-        description="Replace nameID='4' (Full Font Name) records in font files",
+        description="Set the full name (nameID 4) in font files",
         epilog="Supported formats: TTF, OTF, WOFF, WOFF2, TTX",
     )
 
@@ -706,39 +702,39 @@ def main():
         "-r",
         "--recursive",
         action="store_true",
-        help="Recurse into subdirectories when scanning directories",
+        help="include subfolders",
     )
 
-    parser.add_argument("--family", default=None, help="Family name")
+    parser.add_argument("--family", default=None, help="family name")
 
     parser.add_argument(
-        "-m", "--modifier", help="Optional modifier (e.g., 'Condensed', 'Extended')"
+        "-m", "--modifier", help="modifier, for example Condensed or Extended"
     )
 
     parser.add_argument(
         "-s",
         "--style",
         default=None,
-        help="Optional style (e.g., 'Light', 'Bold') - 'Regular' is omitted from display",
+        help="style words, for example Light or Bold (Regular is added when the style has no weight)",
     )
 
     parser.add_argument(
         "-sl",
         "--slope",
-        help="Optional slope (e.g., 'Italic', 'Oblique') - 'Italic' is kept unlike nameID=1",
+        help="slope words, for example Italic or Oblique (the full name keeps Italic)",
     )
 
     parser.add_argument(
         "-str",
         "--string",
-        help="Override nameID=4 content with exact string (supersedes all other options)",
+        help="set the full name (nameID 4) to exactly this text; other options are ignored",
     )
 
     parser.add_argument(
         "-n",
         "--dry-run",
         action="store_true",
-        help="Show what would be done without making changes",
+        help="preview only; change nothing",
     )
 
     add_weight_override_args(parser)
@@ -749,9 +745,9 @@ def main():
         nargs="?",
         const="",
         help=(
-            "Derive family/style from filename. With a value, use that sample path for all files; "
-            "with no value, derive per-file from its own path. If no paths are provided and a value is passed, "
-            "that value is treated as the target path. -f/-s override; -fp only fills missing."
+            "read the family and style from the filename: from the sample path you give after -fp for every "
+            "font, or from each font's own filename if you give none (a path given with no other paths is also "
+            "the font to process). --family and -s win; -fp only fills what is missing"
         ),
     )
 
@@ -759,21 +755,21 @@ def main():
         "-dmr",
         "--delete-mac-records",
         action="store_true",
-        help="Remove Mac name records (platformID=1) before processing",
+        help="remove all Mac name records (platform 1) before processing",
     )
 
     parser.add_argument(
         "--empty-fields-only",
         action="store_true",
         dest="empty_fields_only",
-        help="Only fill blank Windows English nameID 4; do not overwrite existing text",
+        help="fill only the blank Windows English full name record (nameID 4); leave existing text alone",
     )
 
     parser.add_argument(
         "-y",
         "--yes",
         action="store_true",
-        help="Auto-confirm all prompts",
+        help="skip the confirmation",
     )
 
     args = parser.parse_args()

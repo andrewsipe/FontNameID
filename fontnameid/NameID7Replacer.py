@@ -320,7 +320,7 @@ def process_files(file_paths, script_args, batch_context=False):
     operations = []
     if script_args.string:
         operations.append(
-            f"Replace nameID 7 (Trademark) with exact string: '{script_args.string}'"
+            f"Set the trademark notice (nameID 7) to exactly: {script_args.string}"
         )
     else:
         source_parts = [
@@ -328,12 +328,12 @@ def process_files(file_paths, script_args, batch_context=False):
             describe_holder_source(script_args.designer),
         ]
         operations.append(
-            "Replace nameID 7 (Trademark) per file "
+            "Set the trademark notice (nameID 7) for each font "
             f"({'; '.join(source_parts)})"
         )
 
     if getattr(script_args, "empty_fields_only", False):
-        operations.append("Only fill blank nameID 7 entries (--empty-fields-only)")
+        operations.append("Only fill the blank trademark notice record (--empty-fields-only)")
 
     # Define the file processing function for this script
     def process_single_file(filepath, args, dry_run, stats=None):
@@ -387,8 +387,8 @@ def main():
     parser = argparse.ArgumentParser(
         allow_abbrev=False,
         description=(
-            "Replace nameID='7' (Trademark) records. Builds a standard notice from "
-            "per-font metadata unless -str/--string overrides."
+            "Set the trademark notice (nameID 7). Builds a standard notice from each font's own "
+            "metadata unless -str gives the exact text."
         ),
         epilog=TRADEMARK_ARGPARSE_EPILOG,
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -399,7 +399,7 @@ def main():
         "-r",
         "--recursive",
         action="store_true",
-        help="Recurse into subdirectories when scanning directories",
+        help="include subfolders",
     )
 
     parser.add_argument(
@@ -418,42 +418,42 @@ def main():
     parser.add_argument(
         "-str",
         "--string",
-        help="Override nameID=7 content with exact string (supersedes all other options)",
+        help="set the trademark notice (nameID 7) to exactly this text; other options are ignored",
     )
 
     parser.add_argument(
         "-n",
         "--dry-run",
         action="store_true",
-        help="Show what would be done without making changes",
+        help="preview only; change nothing",
     )
 
     parser.add_argument(
         "-y",
         "--yes",
         action="store_true",
-        help="Auto-confirm all prompts",
+        help="skip the confirmation",
     )
 
     parser.add_argument(
         "-fp",
         "--filename-parser",
         action="store_true",
-        help="Enable filename parsing (for BatchRunner compatibility)",
+        help="accepted so the same flags work in fontnameid batch; no effect on this ID",
     )
 
     parser.add_argument(
         "-dmr",
         "--delete-mac-records",
         action="store_true",
-        help="Remove Mac name records (platformID=1) before processing",
+        help="remove all Mac name records (platform 1) before processing",
     )
 
     parser.add_argument(
         "--empty-fields-only",
         action="store_true",
         dest="empty_fields_only",
-        help="Only fill blank Windows English nameID 7; do not overwrite existing text",
+        help="fill only the blank Windows English trademark notice record (nameID 7); leave existing text alone",
     )
 
     args = parser.parse_args()

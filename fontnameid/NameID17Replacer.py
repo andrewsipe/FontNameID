@@ -499,7 +499,7 @@ def process_files(file_paths, script_args, batch_context=False):
     operations = []
     if script_args.string:
         operations.append(
-            f"Replace nameID 17 (Typographic Subfamily) with string override: '{script_args.string}'"
+            f"Set the typographic style (nameID 17) to exactly: {script_args.string}"
         )
     else:
         source_parts = []
@@ -510,11 +510,11 @@ def process_files(file_paths, script_args, batch_context=False):
         if _flag_provided("-sl", "--slope"):
             source_parts.append(f"slope override: '{script_args.slope}'")
         if script_args.filename_parser is not None:
-            source_parts.append("filename parser")
+            source_parts.append("the filename")
         if not source_parts:
             source_parts.append("default values")
         operations.append(
-            f"Replace nameID 17 (Typographic Subfamily) using {', '.join(source_parts)}"
+            f"Set the typographic style (nameID 17) using {', '.join(source_parts)}"
         )
 
     if getattr(script_args, "empty_fields_only", False):
@@ -623,7 +623,7 @@ def main():
 
     parser = argparse.ArgumentParser(
         allow_abbrev=False,
-        description="Replace nameID='17' (Typographic Subfamily) records in font files",
+        description="Set the typographic style (nameID 17) in font files",
         epilog="Supported formats: TTF, OTF, WOFF, WOFF2, TTX",
     )
 
@@ -632,37 +632,37 @@ def main():
         "-r",
         "--recursive",
         action="store_true",
-        help="Recurse into subdirectories when scanning directories",
+        help="include subfolders",
     )
 
     parser.add_argument(
-        "-m", "--modifier", help="Optional modifier (e.g., 'Condensed', 'Extended')"
+        "-m", "--modifier", help="modifier, for example Condensed or Extended"
     )
 
     parser.add_argument(
         "-s",
         "--style",
         default=None,
-        help="Style (e.g., 'Regular', 'Bold', 'Light') - 'Regular' is retained",
+        help="style words, for example Regular, Bold or Light (Regular is kept)",
     )
 
     parser.add_argument(
         "-sl",
         "--slope",
-        help="Optional slope (e.g., 'Italic', 'Oblique') - 'Italic' is retained",
+        help="slope words, for example Italic or Oblique (Italic is kept)",
     )
 
     parser.add_argument(
         "-str",
         "--string",
-        help="Override nameID=17 content with exact string (supersedes all other options)",
+        help="set the typographic style (nameID 17) to exactly this text; other options are ignored",
     )
 
     parser.add_argument(
         "-n",
         "--dry-run",
         action="store_true",
-        help="Show what would be done without making changes",
+        help="preview only; change nothing",
     )
     add_weight_override_args(parser)
 
@@ -671,7 +671,7 @@ def main():
         "--filename-parser",
         action="store_true",
         help=(
-            "Derive style per-file from its own path. -s overrides; -fp only fills missing."
+            "read the style from each font's own filename. -s wins; -fp only fills what is missing"
         ),
     )
 
@@ -679,7 +679,7 @@ def main():
         "-dmr",
         "--delete-mac-records",
         action="store_true",
-        help="Remove Mac name records (platformID=1) before processing",
+        help="remove all Mac name records (platform 1) before processing",
     )
 
     parser.add_argument(
@@ -687,8 +687,8 @@ def main():
         action="store_true",
         dest="empty_fields_only",
         help=(
-            "Create nameID 17 if missing and fill blank entries only; "
-            "do not overwrite non-blank Windows English text"
+            "add the typographic style (nameID 17) if it is missing, or fill it if blank; "
+            "leave existing Windows English text alone"
         ),
     )
 
@@ -696,7 +696,7 @@ def main():
         "-y",
         "--yes",
         action="store_true",
-        help="Auto-confirm all prompts",
+        help="skip the confirmation",
     )
 
     args = parser.parse_args()

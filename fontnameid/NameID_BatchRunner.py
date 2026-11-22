@@ -32,6 +32,7 @@ from pathlib import Path
 # ruff: noqa: E402
 
 import FontCore.core_console_styles as cs
+from fontnameid.nameid_common import plural
 from FontCore.core_name_attribution import (
     HELP_COPYRIGHT_CURRENT_YEAR_ARG,
     HELP_COPYRIGHT_YEAR_ARG,
@@ -1008,8 +1009,13 @@ def main():
     else:
         # Legacy mode - original argparse code
         parser = argparse.ArgumentParser(
-            description="Run multiple NameID replacers with pass-through flags",
-            epilog=f"IDs supported: 0-17. Use --ids all to run all. Presets: {', '.join(PRESETS.keys())}",
+            description="Run several name replacers in one pass. Each flag goes to the IDs that use it.",
+            epilog=(
+                "IDs 0 to 17, or --ids all. Presets: Names (IDs 1 to 6, 16, 17 from the filenames), "
+                "NamesClean (Names, after removing Mac and FontSquirrel records), Clean (remove Mac and "
+                "FontSquirrel records), LegalClean (remove nameIDs 13 and 14), Core (IDs 1, 4, 6), "
+                "Variable (IDs 1, 4, 16, 17 from the filenames)."
+            ),
         )
 
         # Check for preset mode first
@@ -1052,47 +1058,47 @@ def main():
             "--ids", type=_split_ids, default="all", help="Comma-separated IDs or 'all'"
         )
         parser.add_argument(
-            "-r", "--recursive", action="store_true", help="Recurse into directories"
+            "-r", "--recursive", action="store_true", help="include subfolders"
         )
         parser.add_argument(
             "-n",
             "--dry-run",
             action="store_true",
-            help="Show actions without writing",
+            help="preview only; change nothing",
         )
         parser.add_argument(
             "-y",
             "--yes",
             action="store_true",
-            help="Auto-confirm writes for sub-commands",
+            help="skip the confirmation",
         )
 
         # Pre-pass deletion options
-        deleter_group = parser.add_argument_group("Pre-pass deletion options")
+        deleter_group = parser.add_argument_group("remove name records first, before the replacers run")
         deleter_group.add_argument(
             "-dmr",
             "--delete-mac-records",
             action="store_true",
-            help="Pre-pass: Remove ALL Macintosh records before processing",
+            help="first remove all Mac name records (platform 1)",
         )
         deleter_group.add_argument(
             "-fs",
             "--fontsquirrel",
             action="store_true",
-            help="Pre-pass: Remove FontSquirrel nameIDs (200, 201, 202, 203, 55555)",
+            help="first remove the FontSquirrel name records (nameIDs 200, 201, 202, 203, 55555)",
         )
         deleter_group.add_argument(
             "-kwe",
             "--keep-windows-english",
             action="store_true",
-            help="Pre-pass: Keep only Windows/English/Latin encoded records (platformID=3, platEncID=1, langID=0x409), remove all others",
+            help="first keep only the Windows English name records (platform 3, encoding 1, language 0x409); remove all others",
         )
         deleter_group.add_argument(
             "-dnr",
             "--delete-namerecord",
             action="append",
             default=[],
-            help="Pre-pass: Remove specific nameIDs before processing (repeatable)",
+            help="first remove these nameIDs (repeatable)",
         )
 
         # Pass-through superset (include ID0/ID3 options as well)
@@ -1385,7 +1391,7 @@ def main():
         cs.emit("", console=console)
         for warning_type, files in all_warnings.items():
             cs.emit(
-                f"{warning_type.replace('_', ' ').title()} ({len(files)} file(s)):",
+                f"{warning_type.replace('_', ' ').title()} ({plural(len(files), 'file')}):",
                 console=console,
             )
             for filepath, message in files.items():
@@ -1395,7 +1401,7 @@ def main():
     # Display grouped errors
     if all_errors:
         cs.emit("", console=console)
-        cs.emit(f"Processing Errors ({len(all_errors)} file(s)):", console=console)
+        cs.emit(f"Processing Errors ({plural(len(all_errors), 'file')}):", console=console)
         for filepath, message in all_errors.items():
             cs.emit(f"  {filepath}", console=console)
             cs.emit(f"    - {message}", console=console)

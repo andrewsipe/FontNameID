@@ -703,7 +703,7 @@ def process_files(file_paths, script_args, batch_context=False):
     operations = []
     if script_args.string:
         operations.append(
-            f"Replace nameID 3 (Unique ID) with exact string: '{script_args.string}'"
+            f"Set the unique ID (nameID 3) to exactly: {script_args.string}"
         )
     else:
         # Build detailed source information
@@ -730,12 +730,12 @@ def process_files(file_paths, script_args, batch_context=False):
             details.append("Filename: auto-detect from file")
 
         operations.append(
-            "Replace nameID 3 (Unique ID) with format: version;vendor;filename"
+            "Set the unique ID (nameID 3) to the format: version;vendor;filename"
         )
         operations.extend(details)
 
     if getattr(script_args, "empty_fields_only", False):
-        operations.append("Only fill blank nameID 3 entries (--empty-fields-only)")
+        operations.append("Only fill the blank unique ID record (--empty-fields-only)")
 
     # Define the file processing function for this script
     def process_single_file(filepath, args, dry_run, stats=None):
@@ -794,7 +794,7 @@ def main():
 
     parser = argparse.ArgumentParser(
         allow_abbrev=False,
-        description="Replace nameID='3' records in font files with version;vendor;filename format",
+        description="Set the unique ID (nameID 3) in font files to version;vendor;filename",
         epilog="Supported formats: TTF, OTF, WOFF, WOFF2, TTX",
     )
 
@@ -803,7 +803,7 @@ def main():
         "-r",
         "--recursive",
         action="store_true",
-        help="Recurse into subdirectories when scanning directories",
+        help="include subfolders",
     )
 
     parser.add_argument(
@@ -823,42 +823,42 @@ def main():
     parser.add_argument(
         "-str",
         "--string",
-        help="Override nameID=3 content with exact string (supersedes all other options)",
+        help="set the unique ID (nameID 3) to exactly this text; other options are ignored",
     )
 
     parser.add_argument(
         "-n",
         "--dry-run",
         action="store_true",
-        help="Show what would be done without making changes",
+        help="preview only; change nothing",
     )
 
     parser.add_argument(
         "-y",
         "--yes",
         action="store_true",
-        help="Auto-confirm all prompts",
+        help="skip the confirmation",
     )
 
     parser.add_argument(
         "-fp",
         "--filename-parser",
         action="store_true",
-        help="Enable filename parsing (for BatchRunner compatibility)",
+        help="accepted so the same flags work in fontnameid batch; no effect on this ID",
     )
 
     parser.add_argument(
         "-dmr",
         "--delete-mac-records",
         action="store_true",
-        help="Remove Mac name records (platformID=1) before processing",
+        help="remove all Mac name records (platform 1) before processing",
     )
 
     parser.add_argument(
         "--empty-fields-only",
         action="store_true",
         dest="empty_fields_only",
-        help="Only fill blank Windows English nameID 3; do not overwrite existing text",
+        help="fill only the blank Windows English unique ID record (nameID 3); leave existing text alone",
     )
 
     args = parser.parse_args()

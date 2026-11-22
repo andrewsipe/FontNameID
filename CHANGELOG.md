@@ -3,7 +3,11 @@
 ## [Unreleased]
 
 ### Changed
-- Install and update instructions use `uv tool install` / `uv tool upgrade` (pipx is no longer mentioned). The README's old pipx section, its wrong package name (`font-nameid`) and the out-of-date "FontCore dependency" section are replaced: FontCore is vendored, so nothing else is installed.
+- `fontnameid 8` to `14` no longer write a placeholder when you give no value. Before, `fontnameid 8 -y fonts/` set every manufacturer name to the word `manufacturer` (IDs 9 to 14 wrote `designer`, `description`, `https://vendorurl.com`, ...). Now the command stops with a message naming the flag to use (`-man`, `-d`, `-desc`, `-vu`, `-du`, `-l`, `-lu`) or `-str`, and changes nothing. In `fontnameid batch`, the IDs that have a value still run.
+- Help text and messages rewritten for the person at the keyboard (see `COPY_AUDIT.md`): standard flag wording (`include subfolders`, `preview only; change nothing`, `skip the confirmation`), plain descriptions ("Set the manufacturer name (nameID 8)"), plan lines that say "Set ... to ...", counts that read "1 file" / "3 files", and Mac and Windows English name records named the same way everywhere.
+
+### Fixed
+- Help that was wrong: the `replace` examples used `-f` and `-r` (the flags are `-F` and `-R`); the `delete` examples named the old script; ID 4's help said Regular is omitted (it is kept); ID 2's help said the style comes from "font metrics" (it comes from the filename style, then the flags, then the angle); the `-fp` help said nothing about what it does.
 
 ## [0.4.0] - 2026-11-21
 

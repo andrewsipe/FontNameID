@@ -22,6 +22,7 @@ from typing import Any, Dict, List, Optional
 # ruff: noqa: E402
 
 import FontCore.core_console_styles as cs
+from fontnameid.nameid_common import plural
 from FontCore.core_file_collector import collect_font_files
 from FontCore.core_metadata_catalog import (
     DERIVE_NAME_IDS,
@@ -222,7 +223,7 @@ def _process_assigned_files(
         entry = index.by_slug[slug]
         direct_values = catalog_name_values(entry.doc, ordered_ids)
         cs.StatusIndicator("info").add_message(
-            f"{catalog_summary(entry.doc)} — {cs.fmt_count(len(paths))} file(s)"
+            f"{catalog_summary(entry.doc)} — {plural(len(paths), 'file')}"
         ).emit(console=console)
         for filepath in paths:
             if delete_mac_records and not dry_run:
@@ -348,7 +349,7 @@ def _process_batch_catalog(
     show_workflow_header(
         "Catalog Metadata Apply (batch)",
         0,
-        f"Auto-matching {cs.fmt_count(len(font_files))} file(s) against {cs.fmt_count(len(index))} catalog(s)",
+        f"Matching {plural(len(font_files), 'file')} against {plural(len(index), 'catalog')}",
         console,
     )
 
@@ -377,14 +378,14 @@ def _process_batch_catalog(
         for slug in sorted(assignments):
             entry = index.by_slug[slug]
             cs.emit(
-                f"  - {catalog_summary(entry.doc)}: {len(assignments[slug])} file(s)",
+                f"  - {catalog_summary(entry.doc)}: {plural(len(assignments[slug]), 'file')}",
                 console=console,
             )
 
     if unmatched:
         cs.emit("", console=console)
         cs.StatusIndicator("warning").add_message(
-            f"{cs.fmt_count(len(unmatched))} file(s) could not be matched to a catalog"
+            f"{plural(len(unmatched), 'file')} could not be matched to a catalog"
         ).emit(console=console)
         for filepath in unmatched[:20]:
             cs.emit(f"  - {cs.fmt_file_compact(filepath)}", console=console)
@@ -508,7 +509,7 @@ def main() -> None:
         "-r",
         "--recursive",
         action="store_true",
-        help="Recurse into subdirectories when scanning directories",
+        help="include subfolders",
     )
     parser.add_argument(
         "--catalog",
@@ -552,19 +553,19 @@ def main() -> None:
         "-n",
         "--dry-run",
         action="store_true",
-        help="Show what would be done without making changes",
+        help="preview only; change nothing",
     )
     parser.add_argument(
         "-y",
         "--yes",
         action="store_true",
-        help="Auto-confirm all prompts",
+        help="skip the confirmation",
     )
     parser.add_argument(
         "-dmr",
         "--delete-mac-records",
         action="store_true",
-        help="Remove Mac name records (platformID=1) before processing",
+        help="remove all Mac name records (platform 1) before processing",
     )
 
     args = parser.parse_args()

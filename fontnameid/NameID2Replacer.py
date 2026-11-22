@@ -657,20 +657,14 @@ def process_files(file_paths, script_args, batch_context=False):
     # Build operations list for preflight checklist
     operations = []
     if script_args.string:
-        operations.append(
-            cs.fmt_replacement_operation(2, "Font Subfamily", "string override")
-        )
+        operations.append(f"Set the style name (nameID 2) to exactly: {script_args.string}")
     elif script_args.subfamily:
-        operations.append(
-            cs.fmt_replacement_operation(2, "Font Subfamily", "user input")
-        )
+        operations.append(f"Set the style name (nameID 2) to: {script_args.subfamily}")
     else:
-        operations.append(
-            cs.fmt_replacement_operation(2, "Font Subfamily", "font metrics detection")
-        )
+        operations.append("Set the style name (nameID 2) from: the filename style, then the font's flags, then its italic angle")
 
     if getattr(script_args, "empty_fields_only", False):
-        operations.append("Only fill blank nameID 2 entries (--empty-fields-only)")
+        operations.append("Only fill the blank style name record (--empty-fields-only)")
 
     # Use the base module workflow
     result = run_workflow(
@@ -707,7 +701,7 @@ def main():
 
     parser = argparse.ArgumentParser(
         allow_abbrev=False,
-        description="Replace nameID='2' (Font Subfamily) records in font files with automatic detection",
+        description="Set the style name (nameID 2) in font files: Regular, Italic, Bold or Bold Italic, worked out from the font unless you give one",
         epilog="Supported formats: TTF, OTF, WOFF, WOFF2, TTX",
     )
 
@@ -716,34 +710,34 @@ def main():
         "-r",
         "--recursive",
         action="store_true",
-        help="Recurse into subdirectories when scanning directories",
+        help="include subfolders",
     )
 
     parser.add_argument(
         "-sf",
         "--subfamily",
         choices=list(VALID_SUBFAMILIES),
-        help="Font subfamily override (choices: %(choices)s). If not provided, will be auto-detected from font metrics.",
+        help="style name to write (choices: %(choices)s). If you don't give one, it comes from the filename style (the word Bold or Italic), then the font's flags, then its italic angle",
     )
 
     parser.add_argument(
         "-str",
         "--string",
-        help="Override nameID=2 content with exact string (supersedes all other options)",
+        help="set the style name (nameID 2) to exactly this text; other options are ignored",
     )
 
     parser.add_argument(
         "-n",
         "--dry-run",
         action="store_true",
-        help="Show what would be done without making changes",
+        help="preview only; change nothing",
     )
 
     parser.add_argument(
         "-y",
         "--yes",
         action="store_true",
-        help="Auto-confirm all prompts",
+        help="skip the confirmation",
     )
 
     add_weight_override_args(parser)
@@ -752,21 +746,21 @@ def main():
         "-fp",
         "--filename-parser",
         action="store_true",
-        help="Enable filename parsing (for BatchRunner compatibility)",
+        help="use each filename's style (the word Bold or Italic) when deciding",
     )
 
     parser.add_argument(
         "-dmr",
         "--delete-mac-records",
         action="store_true",
-        help="Remove Mac name records (platformID=1) before processing",
+        help="remove all Mac name records (platform 1) before processing",
     )
 
     parser.add_argument(
         "--empty-fields-only",
         action="store_true",
         dest="empty_fields_only",
-        help="Only fill blank Windows English nameID 2; do not overwrite existing text",
+        help="fill only the blank Windows English style name record (nameID 2); leave existing text alone",
     )
 
     args = parser.parse_args()

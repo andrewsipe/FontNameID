@@ -495,9 +495,7 @@ def process_files(file_paths, script_args, batch_context=False):
     # Build operations list for preflight checklist
     operations = []
     if script_args.string:
-        operations.append(
-            cs.fmt_replacement_operation(0, "Copyright", "string override")
-        )
+        operations.append(f"Set the copyright notice (nameID 0) to exactly: {script_args.string}")
     else:
         source_parts = [
             describe_holder_source(script_args.designer),
@@ -506,12 +504,10 @@ def process_files(file_paths, script_args, batch_context=False):
                 use_current_year=script_args.current_year,
             ),
         ]
-        operations.append(
-            cs.fmt_replacement_operation(0, "Copyright", "; ".join(source_parts))
-        )
+        operations.append(f"Set the copyright notice (nameID 0) from: {'; '.join(source_parts)}")
 
     if getattr(script_args, "empty_fields_only", False):
-        operations.append("Only fill blank nameID 0 entries (--empty-fields-only)")
+        operations.append("Only fill the blank copyright notice record (--empty-fields-only)")
 
     # Use the base module workflow
     result = run_workflow(
@@ -556,8 +552,8 @@ def main():
     parser = argparse.ArgumentParser(
         allow_abbrev=False,
         description=(
-            "Replace nameID='0' (Copyright) records. Builds a standard notice from "
-            "per-font metadata unless -str/--string overrides."
+            "Set the copyright notice (nameID 0). Builds a standard notice from each font's own "
+            "metadata unless -str gives the exact text."
         ),
         epilog=COPYRIGHT_ARGPARSE_EPILOG,
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -568,7 +564,7 @@ def main():
         "-r",
         "--recursive",
         action="store_true",
-        help="Recurse into subdirectories when scanning directories",
+        help="include subfolders",
     )
 
     parser.add_argument(
@@ -590,42 +586,42 @@ def main():
     parser.add_argument(
         "-str",
         "--string",
-        help="Override nameID=0 content with exact string (supersedes all other options)",
+        help="set the copyright notice (nameID 0) to exactly this text; other options are ignored",
     )
 
     parser.add_argument(
         "-n",
         "--dry-run",
         action="store_true",
-        help="Show what would be done without making changes",
+        help="preview only; change nothing",
     )
 
     parser.add_argument(
         "-y",
         "--yes",
         action="store_true",
-        help="Auto-confirm all prompts",
+        help="skip the confirmation",
     )
 
     parser.add_argument(
         "-fp",
         "--filename-parser",
         action="store_true",
-        help="Enable filename parsing (for BatchRunner compatibility)",
+        help="accepted so the same flags work in fontnameid batch; no effect on this ID",
     )
 
     parser.add_argument(
         "-dmr",
         "--delete-mac-records",
         action="store_true",
-        help="Remove Mac name records (platformID=1) before processing",
+        help="remove all Mac name records (platform 1) before processing",
     )
 
     parser.add_argument(
         "--empty-fields-only",
         action="store_true",
         dest="empty_fields_only",
-        help="Only fill blank Windows English nameID 0; do not overwrite existing text",
+        help="fill only the blank Windows English copyright notice record (nameID 0); leave existing text alone",
     )
 
     args = parser.parse_args()

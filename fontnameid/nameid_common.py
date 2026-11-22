@@ -47,6 +47,11 @@ def adjust_ttx_whitespace(name_table) -> None:
         child.tail = "\n    " if i < total - 1 else "\n  "
 
 
+def plural(count: int, noun: str) -> str:
+    """'1 file', '3 files', '1,204 records' (plain text, safe for print as well as the console)."""
+    return f"{count:,} {noun}" + ("" if count == 1 else "s")
+
+
 def add_weight_override_args(parser) -> None:
     """--weight-word and --weight-position, shared by the replacers that read the filename style."""
     parser.add_argument(

@@ -998,7 +998,7 @@ def process_files(file_paths, script_args, batch_context=False):
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Find and replace text in font name tables (TTF, OTF, WOFF, WOFF2)",
+        description="Find and replace text in name records",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Supported formats: TTF, OTF, WOFF, WOFF2
@@ -1011,22 +1011,22 @@ PRESETS:
 
 EXAMPLES:
   Basic replacement:
-    %(prog)s font.ttf -f "Old Name" -r "New Name"
+    %(prog)s font.ttf -F "Old Name" -R "New Name"
 
   Multiple chained operations (applied in order):
-    %(prog)s font.otf -f "G 1" -r "G1" -f "G 2" -r "G2" -f "G 3" -r "G3"
+    %(prog)s font.otf -F "G 1" -R "G1" -F "G 2" -R "G2" -F "G 3" -R "G3"
 
   Multiple files with output directory:
-    %(prog)s font1.ttf font2.otf -f "old" -r "new" --output-dir modified/ --suffix "_updated"
+    %(prog)s font1.ttf font2.otf -F "old" -R "new" --output-dir modified/ --suffix "_updated"
 
   Process directory (non-recursive):
-    %(prog)s fonts/ -f "Regular" -r "Modified" -i
+    %(prog)s fonts/ -F "Regular" -R "Modified" -i
 
   Process directory recursively:
     %(prog)s fonts/ -r --find "Regular" --replace "Modified" -i
 
   Regex replacement:
-    %(prog)s fonts/ -re -f "(?i)\\b(Regular|Book)\\b" -r "Regular"
+    %(prog)s fonts/ -re -F "(?i)\\b(Regular|Book)\\b" -R "Regular"
 
   Using presets:
     %(prog)s fonts/ Spaces
@@ -1035,12 +1035,12 @@ EXAMPLES:
     %(prog)s fonts/ 3D RemoveModifierSpaces
 
   Target specific name IDs:
-    %(prog)s font.ttf -f "Old" -r "New" --ids 1,2,4
+    %(prog)s font.ttf -F "Old" -R "New" --ids 1,2,4
         """,
     )
 
     parser.add_argument(
-        "paths", nargs="+", help="Font file(s) or directory path(s) to process"
+        "paths", nargs="+", help="Font files or folders to process"
     )
     # Positional (legacy) find/replace
     parser.add_argument(
@@ -1075,18 +1075,18 @@ EXAMPLES:
         "-i",
         "--case-insensitive",
         action="store_true",
-        help="Perform case-insensitive matching",
+        help="ignore case",
     )
     parser.add_argument(
         "-re",
         "--regex",
         action="store_true",
-        help="Treat find text as a regex pattern",
+        help="treat the find text as a regular expression",
     )
     parser.add_argument(
         "-l", "--list", action="store_true", help="List all name records in the font(s)"
     )
-    parser.add_argument("--output-dir", help="Output directory for modified fonts")
+    parser.add_argument("--output-dir", help="write changed fonts to DIR instead of the originals")
     parser.add_argument(
         "--suffix", help='Suffix to append to output filenames (e.g., "_modified")'
     )
@@ -1094,19 +1094,19 @@ EXAMPLES:
         "-n",
         "--dry-run",
         action="store_true",
-        help="Show actions without writing",
+        help="preview only; change nothing",
     )
     parser.add_argument(
         "-y",
         "--yes",
         action="store_true",
-        help="Auto-confirm writes",
+        help="skip the confirmation",
     )
     parser.add_argument(
         "-r",
         "--recursive",
         action="store_true",
-        help="Recursively process fonts in subdirectories",
+        help="include subfolders",
     )
 
     # Check for preset mode first (before parsing)
