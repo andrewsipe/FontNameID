@@ -28,7 +28,7 @@ from FontCore.core_variable_filename_parser import (
     format_variable_filename,
     variable_slots_from_path,
 )
-from FontCore.core_filename_parts_parser import parse_filename
+from FontCore.core_filename_parts_parser import parse_filename, weight_override_note_silenced
 from FontCore.core_font_style_dictionaries import ITALIC_LIKE_SLOPE_TERMS, unknown_weight_candidates
 import re
 
@@ -386,11 +386,11 @@ def unknown_weight_note(filepath: str, args) -> Optional[str]:
     except Exception:
         return None
     words = unknown_weight_candidates(style)
-    if not words:
+    if not words or weight_override_note_silenced():
         return None
     return (
-        f"No weight word in the filename style ({', '.join(words)}). Regular was not added; "
-        "if a weight is missing, add it to the filename."
+        f"No weight word in the filename style ({', '.join(words)}). Regular was not added. "
+        "Name the weight with --weight-word WORD, or use --weight-word none to leave it."
     )
 
 

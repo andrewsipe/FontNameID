@@ -50,6 +50,8 @@ from FontCore.core_ttx_table_io import (
 console = cs.get_console()
 
 from fontnameid.nameid_common import (
+    add_weight_override_args,
+    apply_weight_override_args,
     adjust_ttx_whitespace as _adjust_ttx_whitespace,
     insert_namerecord_in_order as _insert_namerecord_in_order,
     preprocess_explicit_syntax,
@@ -651,6 +653,7 @@ def process_files(file_paths, script_args, batch_context=False):
     Returns:
         int: 0 for success, 1 for error, 2 for quit
     """
+    apply_weight_override_args(script_args)
     # Build operations list for preflight checklist
     operations = []
     if script_args.string:
@@ -743,6 +746,8 @@ def main():
         help="Auto-confirm all prompts",
     )
 
+    add_weight_override_args(parser)
+
     parser.add_argument(
         "-fp",
         "--filename-parser",
@@ -789,7 +794,7 @@ class NameID2Replacer:
 
     name_id = 2
     description = "Subfamily"
-    supported_flags = {"subfamily", "string", "empty_fields_only"}
+    supported_flags = {"subfamily", "string", "empty_fields_only", "weight_word", "weight_position"}
     process_files = staticmethod(process_files)
 
 

@@ -61,6 +61,8 @@ from FontCore.core_nameid_replacer_base import (
 console = cs.get_console()
 
 from fontnameid.nameid_common import (
+    add_weight_override_args,
+    apply_weight_override_args,
     adjust_ttx_whitespace as _adjust_ttx_whitespace,
     flag_provided as _flag_provided,
     insert_namerecord_in_order as _insert_namerecord_in_order,
@@ -386,6 +388,7 @@ def process_files(file_paths, script_args, batch_context=False):
     Returns:
         int: 0 for success, 1 for error, 2 for quit
     """
+    apply_weight_override_args(script_args)
     # If no positional paths were given and -fp supplied a value, treat it as the target path
     if (
         (not file_paths)
@@ -548,6 +551,8 @@ def main():
         ),
     )
 
+    add_weight_override_args(parser)
+
     parser.add_argument(
         "-fp",
         "--filename-parser",
@@ -599,6 +604,8 @@ class NameID16Replacer:
     name_id = 16
     description = "Typographic Family"
     supported_flags = {
+        "weight_word",
+        "weight_position",
         "family",
         "filename_parser",
         "string",

@@ -456,6 +456,34 @@ def ensure_weight_word(text: str) -> str:
     return " ".join(tokens)
 
 
+WEIGHT_POSITIONS = ("last", "first")
+
+
+def apply_weight_override(text: str, word: str | None, position: str = "last") -> str:
+    """Put a weight the user named into a style that has none.
+
+    - word None: nothing changes.
+    - word "none" (any case): nothing changes; the user is saying the style has no weight to add.
+    - Only a style with no weight word is touched. A style that already names a weight keeps it.
+    - position "last" (default): before a trailing Italic, otherwise at the end ("Carved" -> "Carved Light").
+      position "first": at the front ("Carved" -> "Light Carved"), for bespoke words that follow the weight.
+    Safe to run twice: once the word is in, the style has a weight word.
+    """
+    text = " ".join((text or "").split())
+    word = (word or "").strip()
+    if not word or word.lower() == "none" or has_weight_word(text):
+        return text
+    word = join_style_compounds(word)
+    tokens = text.split()
+    if position == "first":
+        tokens.insert(0, word)
+    elif tokens and tokens[-1].lower() == "italic":
+        tokens.insert(len(tokens) - 1, word)
+    else:
+        tokens.append(word)
+    return " ".join(tokens)
+
+
 def join_style_compounds(text: str) -> str:
     """Join the pieces of compound style words that PascalCase splitting pulled apart.
 

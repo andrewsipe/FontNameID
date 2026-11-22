@@ -163,6 +163,8 @@ FLAG_TO_ARGS = {
     "postscript": ["-ps", "--postscript"],
     "empty_fields_only": ["--empty-fields-only"],
     "filename_parser": ["-fp"],
+    "weight_word": ["--weight-word"],
+    "weight_position": ["--weight-position"],
     "string": ["-str", "--string"],
     "subfamily": ["--subfamily"],
     "manufacturer": ["-man", "--manufacturer"],
@@ -544,6 +546,7 @@ def _validate_args(id_num: int, ns: argparse.Namespace) -> List[str]:
         ("postscript", ns.postscript),
         ("empty_fields_only", ns.empty_fields_only),
         ("filename_parser", ns.filename_parser),
+        ("weight_word", getattr(ns, "weight_word", None)),
         ("string", ns.string),
         ("subfamily", ns.subfamily),
         ("manufacturer", ns.manufacturer),
@@ -714,6 +717,8 @@ def _build_args_for_id(id_num: int, ns: argparse.Namespace) -> List[str]:
             "designer_url",
             "license",
             "license_url",
+            "weight_word",
+            "weight_position",
         ):
             # Flags that take values - only forward if explicitly provided
             value = getattr(ns, flag, None)
@@ -1129,6 +1134,9 @@ def main():
             const="",
             help="Derive family/style from filenames. With optional value, use that sample path for all files; without value, derive per-file from its own path",
         )
+        from fontnameid.nameid_common import add_weight_override_args
+
+        add_weight_override_args(parser)
 
         # String override arguments for all scripts
         parser.add_argument(

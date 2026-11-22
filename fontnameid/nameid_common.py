@@ -47,6 +47,35 @@ def adjust_ttx_whitespace(name_table) -> None:
         child.tail = "\n    " if i < total - 1 else "\n  "
 
 
+def add_weight_override_args(parser) -> None:
+    """--weight-word and --weight-position, shared by the replacers that read the filename style."""
+    parser.add_argument(
+        "--weight-word",
+        metavar="WORD",
+        help=(
+            "weight to add to a filename style that has none (Regular, Light, ...). "
+            "Use 'none' to add nothing and silence the note"
+        ),
+    )
+    parser.add_argument(
+        "--weight-position",
+        choices=("last", "first"),
+        default="last",
+        help="where --weight-word goes in the style: last (default; before a trailing Italic) or first",
+    )
+
+
+def apply_weight_override_args(args) -> None:
+    """Set (or clear) the run-wide weight choice from parsed arguments."""
+    from FontCore.core_filename_parts_parser import clear_weight_override, set_weight_override
+
+    word = getattr(args, "weight_word", None)
+    if word:
+        set_weight_override(word, getattr(args, "weight_position", None) or "last")
+    else:
+        clear_weight_override()
+
+
 def get_filename_part(filepath):
     """Extract filename part (without extension)"""
     return Path(filepath).stem
