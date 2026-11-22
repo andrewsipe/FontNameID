@@ -47,6 +47,12 @@ def adjust_ttx_whitespace(name_table) -> None:
         child.tail = "\n    " if i < total - 1 else "\n  "
 
 
+NO_HOLDER_MESSAGE = (
+    "No rights holder: this font has no manufacturer (nameID 8) or designer (nameID 9) name. "
+    "Set one with -d TEXT. Left unchanged."
+)
+
+
 def plural(count: int, noun: str) -> str:
     """'1 file', '3 files', '1,204 records' (plain text, safe for print as well as the console)."""
     return f"{count:,} {noun}" + ("" if count == 1 else "s")

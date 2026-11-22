@@ -47,7 +47,6 @@ from FontCore.core_name_attribution import (
     HELP_COPYRIGHT_CURRENT_YEAR_ARG,
     HELP_COPYRIGHT_YEAR_ARG,
     HELP_HOLDER_ARG,
-    PLACEHOLDER_RIGHTS_HOLDER,
     construct_copyright,
     describe_copyright_year_source,
     describe_holder_source,
@@ -77,6 +76,7 @@ except ImportError:
 console = cs.get_console()
 
 from fontnameid.nameid_common import (
+    NO_HOLDER_MESSAGE,
     adjust_ttx_whitespace as _adjust_ttx_whitespace,
     get_filename_part,
     insert_namerecord_in_order as _insert_namerecord_in_order,
@@ -127,8 +127,10 @@ def _build_copyright_notice(
     holder = (
         str(holder_override).strip()
         if is_explicit_rights_holder_override(holder_override)
-        else PLACEHOLDER_RIGHTS_HOLDER
+        else None
     )
+    if holder is None:
+        return None
     year = resolve_copyright_year(
         use_current_year=use_current_year,
         manual_year=manual_year,
@@ -147,6 +149,8 @@ def _build_copyright_from_ttx(
     use_current_year,
 ) -> str:
     holder = resolve_rights_holder_ttx(root, holder_override)
+    if holder is None:
+        return None
     year = resolve_copyright_year(
         use_current_year=use_current_year,
         manual_year=manual_year,
@@ -165,6 +169,8 @@ def _build_copyright_from_binary(
     use_current_year,
 ) -> str:
     holder = resolve_rights_holder_binary(font, holder_override)
+    if holder is None:
+        return None
     year = resolve_copyright_year(
         use_current_year=use_current_year,
         manual_year=manual_year,
@@ -205,6 +211,9 @@ def process_ttx_file(
                 manual_year=manual_year or created_year,
                 use_current_year=use_current_year,
             )
+            if new_name is None:
+                show_warning(filepath, NO_HOLDER_MESSAGE, dry_run, console)
+                return False
 
         # Find the name table
         name_table = root.find(".//name")
@@ -292,6 +301,10 @@ def process_binary_font(
                 manual_year=manual_year or created_year,
                 use_current_year=use_current_year,
             )
+            if new_name is None:
+                show_warning(filepath, NO_HOLDER_MESSAGE, dry_run, console)
+                font.close()
+                return False
 
         if "name" not in font:
             show_warning(filepath, "No name table found", dry_run, console)
@@ -464,7 +477,7 @@ def process_file_wrapper(filepath, args, dry_run=False, stats=None):
     )
 
     # Show preview in dry-run mode
-    if dry_run:
+    if dry_run and new_name:
         show_info(f"Preview: {new_name}", dry_run, console)
 
     # Process the file

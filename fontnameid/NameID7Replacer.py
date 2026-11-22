@@ -59,6 +59,7 @@ from FontCore.core_ttx_table_io import (
 console = cs.get_console()
 
 from fontnameid.nameid_common import (
+    NO_HOLDER_MESSAGE,
     insert_namerecord_in_order as _insert_namerecord_in_order,
     preprocess_explicit_syntax,
 )
@@ -97,6 +98,9 @@ def process_ttx_file(
         else:
             family_resolved = resolve_family_name_ttx(root, family, filepath)
             holder = resolve_rights_holder_ttx(root, designer)
+            if holder is None:
+                show_warning(filepath, NO_HOLDER_MESSAGE, dry_run, console)
+                return False
             new_name = construct_trademark(family_resolved, holder)
             if not new_name:
                 show_warning(
@@ -187,6 +191,10 @@ def process_binary_font(
         else:
             family_resolved = resolve_family_name_binary(font, family, filepath)
             holder = resolve_rights_holder_binary(font, designer)
+            if holder is None:
+                show_warning(filepath, NO_HOLDER_MESSAGE, dry_run, console)
+                font.close()
+                return False
             new_name = construct_trademark(family_resolved, holder)
             if not new_name:
                 show_warning(

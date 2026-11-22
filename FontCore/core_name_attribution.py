@@ -14,7 +14,6 @@ from FontCore.core_name_policies import (
 )
 from FontCore.core_ttx_table_io import find_namerecord_ttx
 
-PLACEHOLDER_RIGHTS_HOLDER = "designer"
 
 COPYRIGHT_NOTICE_FORMAT = (
     "Copyright © {year} by {holder}. All rights reserved."
@@ -24,7 +23,7 @@ TRADEMARK_NOTICE_FORMAT = "{family} is a trademark of {holder}."
 HELP_HOLDER_ARG = (
     "rights holder for the notice. If you don't give one, it is the font's manufacturer "
     "(nameID 8) and designer (nameID 9): both if they differ, one name if they match, "
-    "just the one that is set otherwise, and the word designer if neither is"
+    "just the one that is set otherwise; a font with neither is skipped with a warning"
 )
 
 HELP_COPYRIGHT_YEAR_ARG = (
@@ -48,7 +47,7 @@ COPYRIGHT_ARGPARSE_EPILOG = f"""Notice format (unless -str/--string is used):
 Rights holder ({{holder}}) when -d/--designer is omitted:
   1. nameID 8 + nameID 9 → "{{manufacturer}} & {{designer}}" (when both differ)
   2. nameID 8 only, or nameID 9 only
-  3. Literal "{PLACEHOLDER_RIGHTS_HOLDER}" if neither exists
+  3. Neither exists: the font is skipped with a warning (give -d/--designer)
 
 Year ({{year}}) when --year and --current-year are omitted:
   1. the font's creation date
@@ -68,7 +67,7 @@ Family ({{family}}) when --family is omitted:
 Rights holder ({{holder}}) when -d/--designer is omitted:
   1. nameID 8 + nameID 9 → "{{manufacturer}} & {{designer}}" (when both differ)
   2. nameID 8 only, or nameID 9 only
-  3. Literal "{PLACEHOLDER_RIGHTS_HOLDER}" if neither exists
+  3. Neither exists: the font is skipped with a warning (give -d/--designer)
 
 Supported formats: TTF, OTF, WOFF, WOFF2, TTX"""
 
@@ -79,10 +78,8 @@ _COPYRIGHT_YEAR_RE = re.compile(
 
 
 def is_explicit_rights_holder_override(value: str | None) -> bool:
-    """True when the user supplied a real holder name (not the argparse placeholder)."""
-    if not value or not str(value).strip():
-        return False
-    return str(value).strip().lower() != PLACEHOLDER_RIGHTS_HOLDER
+    """True when the user gave a holder name (any non-blank text; no word is reserved)."""
+    return bool(value and str(value).strip())
 
 
 def _clean_family_name(value: str | None) -> str | None:
@@ -115,27 +112,23 @@ def combine_rights_holders(
     return man or des or None
 
 
-def resolve_rights_holder_binary(font: Any, holder_override: str | None = None) -> str:
-    """Rights holder: override → ID8 & ID9 → ID8 → ID9 → placeholder."""
+def resolve_rights_holder_binary(font: Any, holder_override: str | None = None) -> str | None:
+    """Rights holder: override → ID8 & ID9 → ID8 → ID9. None when the font has none of them: nothing is invented."""
     if is_explicit_rights_holder_override(holder_override):
         return str(holder_override).strip()
     manufacturer = get_name_string_unicode_fallback(font, 8)
     designer = get_name_string_unicode_fallback(font, 9)
     combined = combine_rights_holders(manufacturer, designer)
-    if combined:
-        return combined
-    return PLACEHOLDER_RIGHTS_HOLDER
+    return combined or None
 
 
-def resolve_rights_holder_ttx(root: Any, holder_override: str | None = None) -> str:
+def resolve_rights_holder_ttx(root: Any, holder_override: str | None = None) -> str | None:
     if is_explicit_rights_holder_override(holder_override):
         return str(holder_override).strip()
     manufacturer = _read_name_id_ttx(root, 8)
     designer = _read_name_id_ttx(root, 9)
     combined = combine_rights_holders(manufacturer, designer)
-    if combined:
-        return combined
-    return PLACEHOLDER_RIGHTS_HOLDER
+    return combined or None
 
 
 def resolve_family_name_binary(
@@ -190,7 +183,10 @@ def construct_copyright(year: int, holder: str) -> str:
 def describe_holder_source(holder_override: str | None) -> str:
     if is_explicit_rights_holder_override(holder_override):
         return f"rights holder: {str(holder_override).strip()} (-d)"
-    return "rights holder from each font's manufacturer and designer names (nameIDs 8 and 9)"
+    return (
+        "rights holder from each font's manufacturer and designer names (nameIDs 8 and 9); "
+        "a font with neither is skipped"
+    )
 
 
 def describe_copyright_year_source(

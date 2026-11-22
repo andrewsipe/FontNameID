@@ -84,5 +84,8 @@ same meaning and scope. *(verify)* = I'm not sure the shorter text keeps the exa
 - **A7:** `-fp` says "no effect on this ID" for IDs 0, 3, 5, 6 and 7 as well as 8 to 14; I checked that none of those read it.
 - New test file `tests/test_wording.py` (57 tests): the placeholder behavior, the corrected examples, and a guard that no help screen uses the old wording.
 
-Not done (outside A, B and C): the "Heads up" line for `fontnameid -h`, the short `-o` for `replace --output-dir`, and one more placeholder: IDs 0 and 7 write the word
-`designer` as the rights holder when a font has neither a manufacturer nor a designer name (the help now says so plainly).
+Not done (outside A, B and C): the "Heads up" line for `fontnameid -h` and the short `-o` for `replace --output-dir`.
+
+**Follow-up, 2026-11-22:** the one remaining placeholder, the word `designer` as the rights holder in IDs 0 and 7, is gone. A font with no manufacturer
+(nameID 8) and no designer (nameID 9) name is skipped with a warning (`No rights holder: ... Set one with -d TEXT. Left unchanged.`) and counted as
+unchanged; `-d TEXT` writes any name, including the word `designer` if you type it. Both help texts say so.

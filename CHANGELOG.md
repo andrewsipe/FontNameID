@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+- IDs 0 (copyright) and 7 (trademark) no longer write the word `designer` as the rights holder when a font has no manufacturer (nameID 8) and no designer (nameID 9) name. That font is now skipped with a warning (`No rights holder: ... Set one with -d TEXT. Left unchanged.`) and counted as unchanged; the other fonts in the run are still processed. `-d TEXT` writes any name, including the word `designer` if you type it. Fonts that have a manufacturer or designer name are unaffected.
+
 ## [0.5.0] - 2026-11-22
 
 FontCore 0.4.1 vendored (see `FontCore/VENDOR.md`).
