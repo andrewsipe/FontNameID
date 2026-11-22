@@ -1,6 +1,8 @@
 # Changelog
 
-## [Unreleased]
+## [0.4.0] - 2026-11-21
+
+FontCore 0.4.0 vendored (see `FontCore/VENDOR.md`).
 
 ### Added
 - `--weight-word WORD|none` and `--weight-position last|first` for IDs 1, 2, 4, 16, 17 and `fontnameid batch`: name the weight for a filename style that has none (`none` adds nothing and silences the note). The same choice applies to every ID, so they cannot disagree.
