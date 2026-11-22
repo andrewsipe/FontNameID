@@ -1,6 +1,8 @@
 # Changelog
 
-## [Unreleased]
+## [0.7.0] - 2026-11-22
+
+FontCore 0.6.0 vendored (see `FontCore/VENDOR.md`).
 
 ### Added
 - `fontnameid replace` takes `-o DIR` as a short for `--output-dir DIR` (write changed fonts to DIR instead of the originals).
