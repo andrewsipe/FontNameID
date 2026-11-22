@@ -3,12 +3,13 @@
 fontnameid ships a minimal copy of [FontCore](https://github.com/andrewsipe/FontCore)
 so it installs without the full library, a submodule, or a symlink.
 
-**Source:** FontCore 0.5.0 (`v0.5.0`)
+**Source:** FontCore 0.5.0 (`v0.5.0-2-ga70c2aa`)
 
 **Do not edit these files here.** Fix them in FontCore, then re-sync.
 
 ## Declared modules
 
+- `core_cli_help.py`
 - `core_console_styles.py`
 - `core_file_collector.py`
 - `core_filename_parts_parser.py`

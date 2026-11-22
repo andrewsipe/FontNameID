@@ -84,8 +84,12 @@ same meaning and scope. *(verify)* = I'm not sure the shorter text keeps the exa
 - **A7:** `-fp` says "no effect on this ID" for IDs 0, 3, 5, 6 and 7 as well as 8 to 14; I checked that none of those read it.
 - New test file `tests/test_wording.py` (57 tests): the placeholder behavior, the corrected examples, and a guard that no help screen uses the old wording.
 
-Not done (outside A, B and C): the "Heads up" line for `fontnameid -h` and the short `-o` for `replace --output-dir`.
+Not done (outside A, B and C): the short `-o` for `replace --output-dir`. The "Heads up" notice was added afterwards (see below).
 
 **Follow-up, 2026-11-22:** the one remaining placeholder, the word `designer` as the rights holder in IDs 0 and 7, is gone. A font with no manufacturer
 (nameID 8) and no designer (nameID 9) name is skipped with a warning (`No rights holder: ... Set one with -d TEXT. Left unchanged.`) and counted as
 unchanged; `-d TEXT` writes any name, including the word `designer` if you type it. Both help texts say so.
+
+**Heads up, 2026-11-22:** `fontnameid -h` now ends with the same boxed "Heads up" panel as FontFixer, Ebrium and FontCatalyst (built by FontCore's `core_cli_help`,
+now vendored): fonts are changed in place, there is no backup, it asks before writing unless you pass `-y`; preview with `-n`; `--output-dir DIR` writes elsewhere (`replace` only).
+Every command that writes (the IDs, `batch`, `delete`, `catalog`, `replace`) ends its own `-h` with one plain line saying the same. `audit` only reads, so it has none.

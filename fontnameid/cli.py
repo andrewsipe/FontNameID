@@ -32,6 +32,38 @@ UTILITIES = {
 }
 
 
+# Commands that change fonts in place. `audit` only reads (with --collect it copies), so it is not here.
+WRITES = {str(i) for i in REPLACER_IDS} | {"batch", "delete", "catalog", "replace"}
+
+HEADS_UP_MESSAGE = (
+    "fontnameid changes your fonts in place. There is no backup, so work on copies "
+    "or preview first. It asks before writing unless you pass -y."
+)
+HEADS_UP_ROWS = (
+    ("Preview, change nothing", "-n, --dry-run"),
+    ("Write changed fonts elsewhere", "--output-dir DIR (replace only)"),
+)
+HEADS_UP_LINE = (
+    "Heads up: fonts are changed in place and there is no backup. "
+    "Work on copies, or preview first with -n."
+)
+
+
+def _print_help() -> None:
+    """The top-level help: the usage text, then the Heads up panel the other font tools show."""
+    print(_usage())
+    try:
+        import FontCore.core_console_styles as cs
+        from FontCore.core_cli_help import safety_panel
+
+        console = cs.get_console()
+        console.print()
+        console.print(safety_panel(HEADS_UP_MESSAGE, HEADS_UP_ROWS))
+    except Exception:  # never let a missing panel break the help
+        print()
+        print(HEADS_UP_LINE)
+
+
 def _usage() -> str:
     lines = [
         "usage: fontnameid <target> [options] PATH [PATH ...]",
@@ -64,7 +96,7 @@ def _module_for(target: str) -> Optional[str]:
 def main(argv: Optional[List[str]] = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     if not argv or argv[0] in ("-h", "--help", "help"):
-        print(_usage())
+        _print_help()
         return 0
     if argv[0] in ("-V", "--version"):
         print(f"fontnameid {__version__}")
@@ -79,11 +111,15 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     module = importlib.import_module(f"fontnameid.{module_name}")
     sys.argv = [f"fontnameid {target}", *rest]
+    asked_for_help = any(arg in ("-h", "--help") for arg in rest)
     try:
         result = module.main()
     except SystemExit as exc:  # scripts exit with their own status
         code = exc.code
-        return code if isinstance(code, int) else (0 if code is None else 1)
+        code = code if isinstance(code, int) else (0 if code is None else 1)
+        if asked_for_help and code == 0 and target in WRITES:
+            print(f"\n{HEADS_UP_LINE}")  # argparse has printed the help and exited
+        return code
     return result if isinstance(result, int) else 0
 
 

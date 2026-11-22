@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- A "Heads up" notice: `fontnameid -h` ends with the boxed panel the other font tools show (fonts are changed in place, there is no backup, preview with `-n`), and every command that writes ends its own `-h` with one line saying the same. `audit` only reads, so it has none.
+
 ## [0.6.0] - 2026-11-22
 
 FontCore 0.5.0 vendored (see `FontCore/VENDOR.md`).

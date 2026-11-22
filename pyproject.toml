@@ -35,4 +35,4 @@ packages = ["fontnameid", "FontCore"]
 testpaths = ["tests"]
 
 [tool.fontcore-vendor]
-modules = ["core_console_styles", "core_file_collector", "core_filename_parts_parser", "core_font_style_dictionaries", "core_metadata_catalog", "core_name_attribution", "core_name_policies", "core_nameid_replacer_base", "core_string_utils", "core_ttx_table_io", "core_variable_filename_parser", "core_variable_font_detection"]
+modules = ["core_cli_help", "core_console_styles", "core_file_collector", "core_filename_parts_parser", "core_font_style_dictionaries", "core_metadata_catalog", "core_name_attribution", "core_name_policies", "core_nameid_replacer_base", "core_string_utils", "core_ttx_table_io", "core_variable_filename_parser", "core_variable_font_detection"]

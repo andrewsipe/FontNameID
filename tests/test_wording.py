@@ -124,3 +124,39 @@ def test_the_standard_flag_words(target):
     for flag, words in (("-n, --dry-run", "preview only; change nothing"), ("-y, --yes", "skip the confirmation")):
         if flag in text:
             assert words in text, (target, flag)
+
+
+# ---- Heads up ---------------------------------------------------------------------------------------------
+
+WRITES = [str(i) for i in IDS] + ["batch", "delete", "catalog", "replace"]
+
+
+def test_the_top_level_help_has_a_heads_up_panel():
+    text = _fontnameid("-h").stdout
+    flat = " ".join(text.replace("│", " ").split())
+    assert "Heads up" in text
+    assert "in place" in flat and "no backup" in flat
+    assert "-n, --dry-run" in flat
+
+
+@pytest.mark.parametrize("target", WRITES)
+def test_every_command_that_writes_says_so_after_its_help(target):
+    out = _fontnameid(target, "-h").stdout
+    last = out.strip().splitlines()[-1]
+    assert last.startswith("Heads up:") and "no backup" in last and "-n" in last
+
+
+def test_audit_does_not_claim_to_change_fonts():
+    out = _fontnameid("audit", "-h").stdout
+    assert "Heads up" not in out
+
+
+def test_an_ordinary_run_is_unchanged(tmp_path):
+    font = _build_font(tmp_path / "Probe-Regular.ttf")
+    result = _fontnameid(8, "-man", "Acme", "-y", font)
+    assert result.returncode == 0 and "Heads up" not in result.stdout
+
+
+def test_the_error_for_an_unknown_target_stays_plain():
+    result = _fontnameid("nope")
+    assert result.returncode == 2 and "unknown target" in result.stderr and "Heads up" not in result.stderr
