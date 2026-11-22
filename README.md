@@ -15,7 +15,6 @@ uv tool install "git+https://github.com/andrewsipe/FontNameID.git"
 # later: uv tool upgrade fontnameid
 ```
 
-Or [pipx](https://pipx.pypa.io/): `pipx install "git+https://github.com/andrewsipe/FontNameID.git"`.
 From a clone: `uv tool install --editable .` (edits take effect immediately).
 
 Requires Python 3.10+. FontCore is vendored in `FontCore/` (see `FontCore/VENDOR.md`), so there is nothing else to install. For TTX files, `pip install lxml` (or `fontnameid[lxml]`) keeps comments and whitespace.
@@ -206,46 +205,13 @@ Most NameID replacer scripts support:
 
 ## Dependencies
 
-See `requirements.txt`:
-- Core dependencies (fonttools, rich) provided by included `core/` library
-- No additional dependencies required
+`fonttools` and `rich`, installed with the tool. FontCore is vendored in `FontCore/` (see `FontCore/VENDOR.md`), so there is nothing else to install. `lxml` is optional (`fontnameid[lxml]`) and keeps comments and whitespace in TTX files.
 
-## Installation
-
-### Option 1: Install with pipx (Recommended)
-
-pipx installs the tool in an isolated environment:
+## Update and uninstall
 
 ```bash
-# Install directly from GitHub
-pipx install git+https://github.com/andrewsipe/FontNameID.git
-```
-
-After installation, run scripts:
-```bash
-fontnameid 1 /path/to/fonts -R
-fontnameid batch --ids 1,4,16,17 -- /path/to/fonts -R
-```
-
-**Upgrade:** `pipx upgrade font-nameid`  
-**Uninstall:** `pipx uninstall font-nameid`
-
-### Option 2: Manual Installation
-
-1. Clone this repository:
-```bash
-git clone https://github.com/andrewsipe/FontNameID.git
-cd FontNameID
-```
-
-2. Install dependencies:
-```bash
-pip install -r requirements.txt
-```
-
-3. Run scripts:
-```bash
-fontnameid 1 /path/to/fonts -R
+uv tool upgrade fontnameid
+uv tool uninstall fontnameid
 ```
 
 ## Related Tools
@@ -253,15 +219,3 @@ fontnameid 1 /path/to/fonts -R
 - [Filename_Tools](https://github.com/andrewsipe/Filename_Tools) - Clean filenames before metadata updates
 - [FileRenamer](https://github.com/andrewsipe/FileRenamer) - Rename files to match PostScript names
 - [Ebrium](https://github.com/andrewsipe/ebrium) - Normalize vertical metrics across families
-
-
-## FontCore dependency
-
-This tool imports the shared [`FontCore`](https://github.com/andrewsipe/FontCore) package (`import FontCore…`). It is **not** vendored or a submodule here. On a fresh machine:
-
-```bash
-git clone https://github.com/andrewsipe/FontCore.git ../FontCore
-python3 -m pip install -e ../FontCore
-```
-
-(In the author's monorepo checkout, `./FontCore` is a local symlink to `../FontCore/src/FontCore`; it is git-ignored.)

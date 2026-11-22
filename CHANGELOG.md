@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+- Install and update instructions use `uv tool install` / `uv tool upgrade` (pipx is no longer mentioned). The README's old pipx section, its wrong package name (`font-nameid`) and the out-of-date "FontCore dependency" section are replaced: FontCore is vendored, so nothing else is installed.
+
 ## [0.4.0] - 2026-11-21
 
 FontCore 0.4.0 vendored (see `FontCore/VENDOR.md`).
