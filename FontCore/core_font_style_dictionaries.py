@@ -259,27 +259,6 @@ MODIFIERS = {"Semi", "Demi", "Extra", "Ultra", "Super"}
 # one word (Semibold, Extralight), and width compounds are joined with their capitals (SemiCondensed).
 WEIGHT_BASES = {"Hairline", "Thin", "Light", "Medium", "Bold", "Black", "Heavy"}
 
-# Terms that suggest elidable=True when used as a weight name (STAT AxisValue names)
-ELIDABLE_WEIGHT_NAMES: frozenset[str] = frozenset(
-    {
-        "Regular",
-        "Normal",
-        "Roman",
-        "Plain",
-        "Standard",
-        "Book",
-        "Text",
-    }
-)
-
-# Terms that suggest elidable=True when used as a width name
-ELIDABLE_WIDTH_NAMES: frozenset[str] = frozenset(
-    {
-        "Normal",
-        "Regular",
-    }
-)
-
 
 # ================================================================================================
 # 4. HYPHEN PLACEMENT RULES (~30 entries)
@@ -316,6 +295,8 @@ HYPHEN_LEFT_TERMS = {
     "SemiWide",
     "ExtraWide",
     "UltraWide",
+    # Variable-font marker
+    "Variable",
 }
 
 # Terms that prefer hyphen on the RIGHT (Display-)
@@ -330,9 +311,7 @@ HYPHEN_RIGHT_TERMS = {
     "Poster",
     "Deck",
     "Micro",
-    "Banner",
     "Round",
-    "Rounded",
     "Mono",
     "Sans",
     "Slab",
