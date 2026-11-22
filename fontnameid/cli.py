@@ -41,7 +41,7 @@ HEADS_UP_MESSAGE = (
 )
 HEADS_UP_ROWS = (
     ("Preview, change nothing", "-n, --dry-run"),
-    ("Write changed fonts elsewhere", "--output-dir DIR (replace only)"),
+    ("Write changed fonts elsewhere", "-o, --output-dir DIR (replace only)"),
 )
 HEADS_UP_LINE = (
     "Heads up: fonts are changed in place and there is no backup. "

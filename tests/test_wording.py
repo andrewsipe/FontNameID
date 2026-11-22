@@ -160,3 +160,14 @@ def test_an_ordinary_run_is_unchanged(tmp_path):
 def test_the_error_for_an_unknown_target_stays_plain():
     result = _fontnameid("nope")
     assert result.returncode == 2 and "unknown target" in result.stderr and "Heads up" not in result.stderr
+
+
+def test_replace_has_a_short_o_for_the_output_folder(tmp_path):
+    font = _build_font(tmp_path / "Probe-Regular.ttf", existing={8: "Old Name"})
+    out = tmp_path / "out"
+    result = _fontnameid("replace", font, "-F", "Old", "-R", "New", "-o", out, "--ids", "8", "-y")
+    assert result.returncode == 0, result.stdout[-400:]
+    assert _name(font, 8) == "Old Name"  # the original is untouched
+    changed = next(out.rglob("*.ttf"))
+    assert _name(changed, 8) == "New Name"
+    assert "-o DIR" in " ".join(_fontnameid("replace", "-h").stdout.split())

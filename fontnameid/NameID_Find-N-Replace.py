@@ -1086,7 +1086,7 @@ EXAMPLES:
     parser.add_argument(
         "-l", "--list", action="store_true", help="List all name records in the font(s)"
     )
-    parser.add_argument("--output-dir", help="write changed fonts to DIR instead of the originals")
+    parser.add_argument("-o", "--output-dir", metavar="DIR", help="write changed fonts to DIR instead of the originals")
     parser.add_argument(
         "--suffix", help='Suffix to append to output filenames (e.g., "_modified")'
     )
