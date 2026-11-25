@@ -1361,7 +1361,8 @@ def main():
     for id_num, stats in script_stats.items():
         status = "✓" if stats["exit_code"] == 0 else "✗"
         cs.emit(
-            f"{status} ID{id_num}: updated: {stats['updated']} | unchanged: {stats['unchanged']} | errors: {stats['errors']}",
+            f"{status} ID{id_num}: "
+            + cs.fmt_run_sentence(stats["updated"], stats["unchanged"], stats["errors"], stats.get("skipped", 0), dry_run=bool(getattr(args, "dry_run", False))),
             console=console,
         )
 

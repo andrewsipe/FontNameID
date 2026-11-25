@@ -1,3 +1,3 @@
 """FontNameID: replace, audit and batch-edit OpenType name-table records."""
 
-__version__ = "0.7.1"
+__version__ = "0.8.0"

@@ -118,6 +118,7 @@ class ProcessingStats:
     def __init__(self):
         self.updated = 0
         self.unchanged = 0
+        self.skipped = 0
         self.errors = 0
         self.warnings = []
         self.error_messages = []
@@ -146,6 +147,7 @@ class ProcessingStats:
         return {
             "updated": self.updated,
             "unchanged": self.unchanged,
+            "skipped": self.skipped,
             "errors": self.errors,
             "warnings": self.warnings,
             "error_messages": self.error_messages,
@@ -310,7 +312,7 @@ def prompt_confirmation(
 
 
 def show_processing_summary(
-    updated: int, unchanged: int, errors: int, dry_run: bool, console
+    updated: int, unchanged: int, errors: int, dry_run: bool, console, skipped: int = 0
 ) -> None:
     """Display standardized processing summary"""
     cs.fmt_processing_summary(
@@ -318,6 +320,7 @@ def show_processing_summary(
         updated=updated,
         unchanged=unchanged,
         errors=errors,
+        skipped=skipped,
         console=console,
     )
 
@@ -401,8 +404,12 @@ def show_warning(filepath: str, message: str, dry_run: bool, console) -> None:
     ).emit(console=console)
 
 
+_LAST_ERROR: dict = {}  # filepath -> the message last shown for it, so the run's error list says why
+
+
 def show_error(filepath: str, message: str, dry_run: bool, console) -> None:
     """Display ERROR message with explanation"""
+    _LAST_ERROR[filepath] = message
     cs.StatusIndicator("error", dry_run=dry_run).add_file(filepath).add_message(
         message
     ).emit(console=console)
@@ -713,7 +720,7 @@ def run_workflow(
                 if reason:
                     show_warning(file, reason, script_args.dry_run, console)
                     stats.add_warning(name_id, file, reason, "skipped")
-                    stats.unchanged += 1
+                    stats.skipped += 1
                     continue
             if note_fn is not None:
                 note = note_fn(file, script_args)
@@ -728,7 +735,7 @@ def run_workflow(
                 stats.add_error(
                     name_id,
                     file,
-                    "Processing failed",
+                    _LAST_ERROR.pop(file, "Processing failed"),
                 )
             elif result:
                 stats.updated += 1
@@ -744,6 +751,7 @@ def run_workflow(
         updated=stats.updated,
         unchanged=stats.unchanged,
         errors=stats.errors,
+        skipped=stats.skipped,
         console=console,
     )
 

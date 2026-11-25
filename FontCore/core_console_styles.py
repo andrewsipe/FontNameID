@@ -890,6 +890,21 @@ def fmt_preflight_checklist(
         emit(f"    {i}. {operation}", console=console)
 
 
+def fmt_run_sentence(
+    updated: int = 0,
+    unchanged: int = 0,
+    errors: int = 0,
+    skipped: int = 0,
+    dry_run: bool = False,
+) -> str:
+    """The one closing sentence every tool uses: "Updated 3, unchanged 1, skipped 1, 2 problems."."""
+    parts = [f"{'Would update' if dry_run else 'Updated'} {updated}", f"unchanged {unchanged}"]
+    if skipped:
+        parts.append(f"skipped {skipped}")
+    parts.append(f"{errors} problem{'' if errors == 1 else 's'}" if errors else "no problems")
+    return ", ".join(parts) + "."
+
+
 def fmt_processing_summary(
     dry_run: bool = False,
     updated: int = 0,
@@ -897,33 +912,28 @@ def fmt_processing_summary(
     errors: int = 0,
     console=None,
     additional_info: list = None,
+    skipped: int = 0,
 ) -> None:
     """
-    Display a standardized processing summary.
-
-    Args:
-        dry_run: Whether this was a dry run
-        updated: Number of files that were updated
-        unchanged: Number of files that were unchanged
-        errors: Number of files that had errors
-        console: Optional console instance
-        additional_info: Optional list of additional info lines to display
+    Display the closing summary: one sentence, a warning chip when anything went wrong.
 
     Example:
-        >>> fmt_processing_summary(dry_run=False, updated=35, unchanged=3, errors=2)
-        # Displays "Finished updated: 35 | unchanged: 3 | errors: 2"
+        >>> fmt_processing_summary(updated=35, unchanged=3, errors=2)
+        # WARNING  Finished  Updated 35, unchanged 3, 2 problems.
     """
     if console is None:
         console = get_console()
 
     emit("")
     label = "Preview" if dry_run else "Finished"
-    StatusIndicator("success", dry_run=dry_run).add_message(label).with_summary_block(
-        updated=updated,
-        unchanged=unchanged,
-        errors=errors,
-        additional_info=additional_info,
-    ).emit(console)
+    indicator = StatusIndicator("warning" if errors else "success", dry_run=dry_run).add_message(label)
+    indent_str = PRE_LABEL_INDENT if dry_run else INDENT
+    indicator.context_parts.append(
+        f"\n{indent_str}{fmt_run_sentence(updated, unchanged, errors, skipped, dry_run)}"
+    )
+    for info in additional_info or []:
+        indicator.context_parts.append(f"\n{indent_str}{info}")
+    indicator.emit(console)
 
 
 def fmt_operation_description(operation_type: str, details: str) -> str:

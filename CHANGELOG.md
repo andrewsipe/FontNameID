@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.8.0] - 2026-11-25
+
+FontCore 0.8.1 vendored (see `FontCore/VENDOR.md`).
+
+### Changed
+- Every run ends with one sentence: "Updated 2, unchanged 4, 1 problem." (a preview says "Would update"). The closing chip turns to a warning when any font had a problem.
+- Fonts skipped for a missing filename style are counted as skipped, not unchanged.
+- The error list now says why a font failed (for example "Not a TrueType or OpenType font") instead of "Processing failed".
+
 ## [0.7.1] - 2026-11-25
 
 FontCore 0.7.0 vendored (see `FontCore/VENDOR.md`).
