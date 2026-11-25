@@ -23,7 +23,7 @@ from typing import Any, Dict, List, Optional
 
 import FontCore.core_console_styles as cs
 from fontnameid.nameid_common import plural
-from FontCore.core_file_collector import collect_font_files
+from FontCore.core_file_collector import SUPPORTED_EXTENSIONS, collect_font_files
 from FontCore.core_metadata_catalog import (
     DERIVE_NAME_IDS,
     DIRECT_NAME_IDS,
@@ -247,7 +247,7 @@ def _process_single_catalog(
     ordered_ids: List[int],
 ) -> int:
     direct_values = catalog_name_values(catalog_doc, ordered_ids)
-    font_files = collect_font_files(file_paths, script_args.recursive)
+    font_files = collect_font_files(file_paths, script_args.recursive, allowed_extensions=SUPPORTED_EXTENSIONS)
     if not font_files:
         show_error("", "No font files found to process", False, console)
         return 1
@@ -330,7 +330,7 @@ def _process_batch_catalog(
         show_error("", str(exc), False, console)
         return 1
 
-    font_files = collect_font_files(file_paths, script_args.recursive)
+    font_files = collect_font_files(file_paths, script_args.recursive, allowed_extensions=SUPPORTED_EXTENSIONS)
     if not font_files:
         show_error("", "No font files found to process", False, console)
         return 1

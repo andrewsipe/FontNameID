@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.1] - 2026-11-25
+
+FontCore 0.7.0 vendored (see `FontCore/VENDOR.md`).
+
+### Changed
+- File collection follows one set of rules: macOS junk (`._*`, `__MACOSX`) and hidden files and folders are skipped, each real file is listed once (a symlink and its target are one file), and a path that does not exist gets a warning. Binary formats are the default; this tool asks for TTX where it handles it. IDs 0 to 17, `delete` and `catalog` still include TTX files.
+
 ## [0.7.0] - 2026-11-22
 
 FontCore 0.6.0 vendored (see `FontCore/VENDOR.md`).

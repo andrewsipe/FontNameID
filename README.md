@@ -1,6 +1,6 @@
 # FontNameID
 
-**Version 0.7.0**
+**Version 0.7.1**
 
 Replace, audit and batch-edit the name-table (nameID) records of font files: copyright, family and style names, version, PostScript name, vendor and license text.
 

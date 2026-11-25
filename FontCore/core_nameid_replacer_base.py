@@ -8,7 +8,7 @@ Provides helper functions to reduce code duplication and ensure consistent styli
 
 from fontTools.ttLib import TTFont
 import FontCore.core_console_styles as cs
-from FontCore.core_file_collector import collect_font_files
+from FontCore.core_file_collector import SUPPORTED_EXTENSIONS, collect_font_files
 from FontCore.core_ttx_table_io import (
     load_ttx,
     count_mac_name_records_ttx,
@@ -586,7 +586,15 @@ def run_workflow(
 
     # Discover files
     recursive = getattr(script_args, "recursive", False)
-    font_files = collect_font_files(file_paths, recursive)
+    missing_paths: list = []
+    font_files = collect_font_files(
+        file_paths,
+        recursive,
+        allowed_extensions=SUPPORTED_EXTENSIONS,  # these replacers also edit TTX files
+        on_missing=missing_paths.append,
+    )
+    for missing in missing_paths:
+        cs.StatusIndicator("warning").add_message(f"Path not found: {missing}").emit(console=console)
     if not font_files:
         cs.StatusIndicator("error").add_message("No font files found.").emit(
             console=console

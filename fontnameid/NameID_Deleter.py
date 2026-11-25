@@ -337,7 +337,7 @@ def process_files(file_paths, script_args, batch_context=False):
     """
     # FUTURE REFACTOR CANDIDATE - File collection and validation could be extracted to helper
     # Discover files
-    font_files = collect_font_files(file_paths, script_args.recursive)
+    font_files = collect_font_files(file_paths, script_args.recursive, allowed_extensions=SUPPORTED_EXTENSIONS)
     if not font_files:
         cs.StatusIndicator("error").add_message("No font files found to process.").emit(
             console
