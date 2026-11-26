@@ -382,9 +382,17 @@ def no_style_skip_reason(filepath: str, args) -> Optional[str]:
 
 
 def unknown_weight_note(filepath: str, args) -> Optional[str]:
-    """With -fp, a style with no weight word and some other word: say Regular was not added."""
+    """With -fp, a style with no weight word and some other word: say Regular was not added.
+
+    Not for a variable font: its weight is free or locked by its tables, and a variable name never carries a bare Regular.
+    """
     if not fp_enabled(args):
         return None
+    try:
+        if resolve_variable_slots_for_replacer(filepath) is not None:
+            return None
+    except Exception:
+        pass
     try:
         style = parse_filename(filepath).subfamily
     except Exception:
@@ -541,6 +549,31 @@ def clean_variable_family_name(family: str) -> str:
     from FontCore.core_name_policies import strip_variable_tokens
 
     return strip_variable_tokens(family) or family
+
+
+def variable_house_stem(filepath: str) -> Optional[str]:
+    """The house-form filename stem for a variable font (what ID6 and ID3 should carry, and what fontrenamer writes), else None."""
+    from FontCore.core_variable_filename_parser import format_variable_filename
+
+    slots = resolve_variable_slots_for_replacer(filepath)
+    return format_variable_filename(slots) if slots is not None else None
+
+
+def variable_id2_subfamily(font, filepath: str, detected: str) -> str:
+    """ID2 for a variable font: Regular or Italic from the tables' slope decision (Bold kept from ``detected``).
+
+    The filename is not evidence for a variable font: an italic variable font named ``Probe-Variable`` is still Italic.
+    A static font, and a variable font with no free axes, keep ``detected``.
+    """
+    from FontCore.core_variable_traits import analyze_variable_traits
+
+    traits = analyze_variable_traits(font, filename=Path(filepath).name)
+    if not traits.is_variable or traits.no_free_axes:
+        return detected
+    italic = traits.slope == "italic"
+    if "bold" in (detected or "").lower():
+        return "Bold Italic" if italic else "Bold"
+    return "Italic" if italic else "Regular"
 
 
 def resolve_variable_slots_for_replacer(filepath: str):

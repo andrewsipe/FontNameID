@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.1] - 2026-11-26
+
+FontCore 0.11.4 vendored (see `FontCore/VENDOR.md`).
+
+### Fixed
+- 0.12.0 shipped with the previous FontCore copy; this release carries the FontCore 0.11.4 helpers (house stem, ID2 slope, fvar detection) that 0.12.0 describes.
+
 ## [0.12.0] - 2026-11-26
 
 FontCore 0.11.4 vendored (see `FontCore/VENDOR.md`).
