@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.0] - 2026-11-26
+
+FontCore 0.10.0 vendored (see `FontCore/VENDOR.md`).
+
+### Changed
+- Variable-font names follow the refined rule (FontCore `DECISIONS.md`, Area 5): bare `Variable` is weight plus a free slope; ID17 writes the slope out (`Upright`, the designer's word, or `Upright Italic`); ID1/ID16 carry `Width`, `OpticalSize`, `Custom` and `Collection`; the slope word comes from the named instances first, in the designer's spelling.
+
 ## [0.9.1] - 2026-11-25
 
 FontCore 0.9.1 vendored: a variable font with no weight axis and a Regular weight class no longer gets a `Regular` word in its name.
