@@ -273,8 +273,10 @@ def process_ttx_file(
                         fam = fallback
                 if not fam:
                     fam = get_filename_part(filepath)
-                # For variable fonts, use filename directly instead of constructing from family + slope
-                filename = sanitize_postscript(get_filename_part(filepath))
+                # The unique ID carries the house-form stem, like ID6 (see NameID6Replacer)
+                from FontCore.core_nameid_replacer_base import variable_house_stem
+
+                filename = sanitize_postscript(variable_house_stem(filepath) or get_filename_part(filepath))
             else:
                 fam = get_filename_part(filepath)
                 filename = sanitize_postscript(fam)
@@ -421,8 +423,10 @@ def process_binary_font(
                         fam = fallback
                 if not fam:
                     fam = get_filename_part(filepath)
-                # For variable fonts, use filename directly instead of constructing from family + slope
-                filename = sanitize_postscript(get_filename_part(filepath))
+                # The unique ID carries the house-form stem, like ID6 (see NameID6Replacer)
+                from FontCore.core_nameid_replacer_base import variable_house_stem
+
+                filename = sanitize_postscript(variable_house_stem(filepath) or get_filename_part(filepath))
             else:
                 fam = get_filename_part(filepath)
                 filename = sanitize_postscript(fam)

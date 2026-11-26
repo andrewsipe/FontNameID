@@ -265,10 +265,12 @@ def process_binary_font(
             new_name = sanitize_postscript(postscript_override)
         else:
             if is_variable_font_binary(font):
-                # For variable fonts, use filename directly instead of constructing from family + slope
-                new_name = sanitize_postscript(
-                    get_postscript_name_from_filename(filepath)
-                )
+                # A variable font's PostScript name is its house-form filename stem (what fontrenamer writes), so ID6
+                # and the filename agree whichever tool runs first. Falls back to the current stem.
+                from FontCore.core_nameid_replacer_base import variable_house_stem
+
+                stem = variable_house_stem(filepath) or get_postscript_name_from_filename(filepath)
+                new_name = sanitize_postscript(stem)
             else:
                 new_name = sanitize_postscript(
                     get_postscript_name_from_filename(filepath)

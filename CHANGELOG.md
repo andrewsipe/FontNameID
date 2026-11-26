@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.0] - 2026-11-26
+
+FontCore 0.11.4 vendored (see `FontCore/VENDOR.md`).
+
+### Fixed
+- A variable font is recognised by its fvar table alone (STAT is no longer required), so fonts without STAT are no longer named as statics. ID2 and the style flags follow the tables' slope decision for a variable font, not the filename: an italic variable font named `Probe-Variable` stays Italic instead of being cleared to Regular. ID6 and ID3 carry the house-form filename stem, so they agree with the name fontrenamer writes whichever tool runs first. No static 'Regular was not added' note on variable fonts.
+
 ## [0.11.2] - 2026-11-26
 
 FontCore 0.11.2 vendored: a locked weight word is written only when the filename states it. The name table and `usWeightClass` are no longer read for a weight, and there is no `Weight` placeholder (`Danfo-Variable` becomes `Danfo-CustomVariableUpright`). A locked `Regular` the filename states is still written.

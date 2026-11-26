@@ -419,6 +419,11 @@ def process_binary_font(
                 style_signal(filepath, font=font, use_filename_style=use_filename_style),
             )
             detected_subfamily = determine_subfamily(metrics)
+            if is_vf and not subfamily_override:
+                # A variable font's slope comes from its tables, not its filename (DECISIONS.md, Area 5)
+                from FontCore.core_nameid_replacer_base import variable_id2_subfamily
+
+                detected_subfamily = variable_id2_subfamily(font, filepath, detected_subfamily)
             # Use override if provided, otherwise use detected subfamily
             subfamily = subfamily_override if subfamily_override else detected_subfamily
             print_metrics(metrics, detected_subfamily, subfamily)
