@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.0] - 2026-11-26
+
+FontCore 0.11.0 vendored (see `FontCore/VENDOR.md`).
+
+### Changed
+- Variable-font names follow the third form (FontCore `DECISIONS.md`, Area 5): ID16 carries the fixed family spec including a locked weight ("Augure Stereo Light Variable"); ID1 adds the free extras; ID17 is the free extras plus the slope (`Upright`, the designer's word, or `Upright Italic`). A font with no weight axis takes its weight word from its names (never Regular, never `usWeightClass`) or the placeholder `Weight`. A font whose every axis is locked is named as a static font.
+
 ## [0.10.2] - 2026-11-26
 
 FontCore 0.10.2 vendored: a locked `Regular` weight word is kept (`AugureStereo-VariableRegular` is no longer mistaken for a free weight), and is dropped only when the font has a free weight axis.
