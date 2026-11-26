@@ -896,9 +896,13 @@ def fmt_run_sentence(
     errors: int = 0,
     skipped: int = 0,
     dry_run: bool = False,
+    verb: str = "Updated",
+    would_verb: str = "Would update",
 ) -> str:
     """The one closing sentence every tool uses: "Updated 3, unchanged 1, skipped 1, 2 problems."."""
-    parts = [f"{'Would update' if dry_run else 'Updated'} {updated}", f"unchanged {unchanged}"]
+    parts = [f"{would_verb if dry_run else verb} {updated}"]
+    if unchanged is not None:  # a tool with no "already fine" outcome passes None
+        parts.append(f"unchanged {unchanged}")
     if skipped:
         parts.append(f"skipped {skipped}")
     parts.append(f"{errors} problem{'' if errors == 1 else 's'}" if errors else "no problems")
@@ -913,6 +917,8 @@ def fmt_processing_summary(
     console=None,
     additional_info: list = None,
     skipped: int = 0,
+    verb: str = "Updated",
+    would_verb: str = "Would update",
 ) -> None:
     """
     Display the closing summary: one sentence, a warning chip when anything went wrong.
@@ -929,7 +935,7 @@ def fmt_processing_summary(
     indicator = StatusIndicator("warning" if errors else "success", dry_run=dry_run).add_message(label)
     indent_str = PRE_LABEL_INDENT if dry_run else INDENT
     indicator.context_parts.append(
-        f"\n{indent_str}{fmt_run_sentence(updated, unchanged, errors, skipped, dry_run)}"
+        f"\n{indent_str}{fmt_run_sentence(updated, unchanged, errors, skipped, dry_run, verb, would_verb)}"
     )
     for info in additional_info or []:
         indicator.context_parts.append(f"\n{indent_str}{info}")

@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.9.0] - 2026-11-25
+
+FontCore 0.9.0 vendored (see `FontCore/VENDOR.md`).
+
+### Changed
+- Variable-font names follow the new convention (FontCore `DECISIONS.md`, Area 5). The font's tables decide whether it is variable, which axes are free and whether the slope is free, italic or upright; the filename supplies the family and the locked optical size, width and weight.
+- ID16 is the locked design plus Variable ("Probe Display Condensed Variable"). ID1 adds the free axes ("Probe Variable Width", "Probe Variable 3 Axis") and a locked weight. ID17 is those words plus the slope, with `Upright` for a fixed upright, and `Regular` is no longer used. ID4 is ID16 plus ID17 ("Probe Variable Upright").
+- A variable font whose filename has no Variable marker is still treated as variable, and a static font named Variable is not.
+
 ## [0.8.0] - 2026-11-25
 
 FontCore 0.8.1 vendored (see `FontCore/VENDOR.md`).

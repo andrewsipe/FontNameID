@@ -1,4 +1,4 @@
-"""End to end: a variable font keeps the word Variable in ID1; ID4 and ID16 are unchanged."""
+"""End to end: a variable font keeps the word Variable in ID1; ID4 names the slope (Upright or Italic)."""
 
 from __future__ import annotations
 
@@ -37,7 +37,7 @@ def _record(font: Path, nid: int) -> str | None:
 @pytest.mark.parametrize(
     "stem, id1, id4, id16",
     [
-        ("Probe-Variable", "Probe Variable", "Probe Variable", "Probe Variable"),
+        ("Probe-Variable", "Probe Variable", "Probe Variable Upright", "Probe Variable"),
         ("Probe-VariableItalic", "Probe Variable", "Probe Variable Italic", "Probe Variable"),
     ],
 )

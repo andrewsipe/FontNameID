@@ -7,6 +7,7 @@ Provides helper functions to reduce code duplication and ensure consistent styli
 """
 
 from fontTools.ttLib import TTFont
+import os
 import FontCore.core_console_styles as cs
 from FontCore.core_file_collector import SUPPORTED_EXTENSIONS, collect_font_files
 from FontCore.core_ttx_table_io import (
@@ -543,14 +544,13 @@ def clean_variable_family_name(family: str) -> str:
 
 
 def resolve_variable_slots_for_replacer(filepath: str):
-    """Parse variable-font filename slots when safe for NameID policy builders."""
-    from FontCore.core_variable_filename_parser import (
-        slots_usable_for_policy,
-        variable_slots_from_path,
-    )
+    """Variable-font slots for the NameID policy builders, or None for a static font.
 
-    slots = variable_slots_from_path(filepath)
-    return slots if slots_usable_for_policy(slots) else None
+    The font's tables decide (DECISIONS.md, Area 5); see ``core_variable_filename_parser.resolve_variable_slots``.
+    """
+    from FontCore.core_variable_filename_parser import resolve_variable_slots
+
+    return resolve_variable_slots(filepath)
 
 
 def run_workflow(
