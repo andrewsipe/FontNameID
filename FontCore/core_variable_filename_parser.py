@@ -115,6 +115,18 @@ class VariableFilenameSlots:
         return not any("invalid" in w.lower() for w in self.warnings)
 
 
+_RE_COPY_SUFFIX = re.compile(r"(?i)(?:[\s_-]*\(\d+\)|[\s_-]+copy(?:[\s_-]*\d+)?|~\d+)\s*$")
+
+
+def _without_copy_suffix(name: str, *, strip_extension: bool) -> str:
+    """Drop a trailing copy marker (" copy", " copy 2", " (2)", "~001") from a filename: it names a duplicate, not a design."""
+    if strip_extension:
+        stem, ext = os.path.splitext(name)
+        if ext.lower() in {".ttf", ".otf", ".woff", ".woff2", ".ttc", ".otc", ".ttx"}:
+            return _RE_COPY_SUFFIX.sub("", stem) + ext
+    return _RE_COPY_SUFFIX.sub("", name)
+
+
 def _sorted_terms_by_length(terms: set[str]) -> list[str]:
     return sorted(terms, key=lambda t: (-len(t), t.lower()))
 
@@ -303,6 +315,7 @@ def parse_variable_filename(
 
     Returns None if the filename does not appear to be a variable font.
     """
+    input_name = _without_copy_suffix(input_name, strip_extension=strip_extension)
     parsed = parse_filename(input_name, strip_extension=strip_extension)
     subfamily_raw = parsed.subfamily_raw or ""
     family_raw = parsed.family_raw or ""
@@ -460,6 +473,7 @@ def slots_from_plain_filename(input_name: str, *, strip_extension: bool = True) 
 
     Only the family, locked optical size and locked width are read; what varies comes from the font's tables.
     """
+    input_name = _without_copy_suffix(input_name, strip_extension=strip_extension)
     parsed = parse_filename(input_name, strip_extension=strip_extension)
     stem = parsed.family_raw or ""
     stem, peeled_width = _peel_trailing_term(stem, ALL_WIDTH_TERMS)
@@ -523,16 +537,17 @@ def slots_usable_for_policy(slots: Optional[VariableFilenameSlots]) -> bool:
     return slots.is_valid
 
 
-def resolve_variable_slots(filepath: str) -> Optional[VariableFilenameSlots]:
+def resolve_variable_slots(filepath: str, *, name: Optional[str] = None) -> Optional[VariableFilenameSlots]:
     """Variable-font slots for a font file, or None for a static font.
 
     The font's tables decide whether it is variable, which axes are free and the slope (DECISIONS.md, Area 5); the
     filename supplies the family and the locked optical size, width and weight. A file that cannot be opened falls
-    back to its filename alone.
+    back to its filename alone. ``name`` is the filename to read the family from when the file currently sits under
+    another name (fontrenamer moves files to temporary names first).
     """
     from FontCore.core_variable_traits import analyze_variable_traits
 
-    basename = os.path.basename(filepath)
+    basename = name or os.path.basename(filepath)
     traits = None
     try:
         from fontTools.ttLib import TTFont
@@ -545,7 +560,7 @@ def resolve_variable_slots(filepath: str) -> Optional[VariableFilenameSlots]:
     except Exception:
         traits = None
 
-    slots = variable_slots_from_path(filepath)
+    slots = parse_variable_filename(basename, strip_extension=True)
     if traits is None:
         return slots if slots_usable_for_policy(slots) else None
     if not traits.is_variable or traits.no_free_axes:

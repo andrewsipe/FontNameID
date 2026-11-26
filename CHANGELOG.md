@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.2] - 2026-11-26
+
+FontCore 0.11.6 vendored (see `FontCore/VENDOR.md`).
+
+### Fixed
+- FontCore 0.11.6: a copy marker on a variable filename (` copy`, ` (2)`, `~001`) is a duplicate marker, not a design variant, so it no longer ends up in ID16 and ID1.
+
 ## [0.12.1] - 2026-11-26
 
 FontCore 0.11.4 vendored (see `FontCore/VENDOR.md`).
