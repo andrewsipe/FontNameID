@@ -381,6 +381,24 @@ def no_style_skip_reason(filepath: str, args) -> Optional[str]:
     )
 
 
+def pinned_axes_note(filepath: str) -> Optional[str]:
+    """For a variable font whose every axis is pinned (min = default = max): say so, since it is a static font in a variable file."""
+    try:
+        from fontTools.ttLib import TTFont
+
+        font = TTFont(filepath, lazy=True, fontNumber=0, recalcTimestamp=False)
+        try:
+            axes = list(font["fvar"].axes) if "fvar" in font else []
+        finally:
+            font.close()
+    except Exception:
+        return None
+    if not axes or any(a.minValue != a.maxValue for a in axes):
+        return None
+    pins = ", ".join(f"{a.axisTag} = {a.defaultValue:g}" for a in axes)
+    return f"This is a variable font with every axis pinned ({pins}): it behaves as a static font and keeps its Variable name."
+
+
 def unknown_weight_note(filepath: str, args) -> Optional[str]:
     """With -fp, a style with no weight word and some other word: say Regular was not added.
 
@@ -388,6 +406,7 @@ def unknown_weight_note(filepath: str, args) -> Optional[str]:
     """
     if not fp_enabled(args):
         return None
+    pinned = pinned_axes_note(filepath)
     try:
         if resolve_variable_slots_for_replacer(filepath) is not None:
             return None
@@ -401,7 +420,8 @@ def unknown_weight_note(filepath: str, args) -> Optional[str]:
     if not words or weight_override_note_silenced():
         return None
     return (
-        f"No weight word in the filename style ({', '.join(words)}). Regular was not added. "
+        (pinned + " " if pinned else "")
+        + f"No weight word in the filename style ({', '.join(words)}). Regular was not added. "
         "Name the weight with --weight-word WORD, or use --weight-word none to leave it."
     )
 
