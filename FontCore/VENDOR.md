@@ -3,7 +3,7 @@
 fontnameid ships a minimal copy of [FontCore](https://github.com/andrewsipe/FontCore)
 so it installs without the full library, a submodule, or a symlink.
 
-**Source:** FontCore 0.12.1 (`v0.12.1`)
+**Source:** FontCore 0.16.0 (`v0.16.0`)
 
 **Do not edit these files here.** Fix them in FontCore, then re-sync.
 
@@ -20,6 +20,8 @@ so it installs without the full library, a submodule, or a symlink.
 - `core_nameid_replacer_base.py`
 - `core_string_utils.py`
 - `core_ttx_table_io.py`
+- `core_slant_measure.py`
+- `core_slope_resolver.py`
 - `core_variable_filename_parser.py`
 - `core_variable_font_detection.py`
 - `core_variable_traits.py`

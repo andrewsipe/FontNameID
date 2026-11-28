@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.13.0] - 2026-11-27
+
+FontCore 0.16.0 vendored (see `FontCore/VENDOR.md`).
+
+### Changed
+- Upright or Italic for a variable font's names now comes from one decision made for the whole run, before any name is written (FontCore's `core_slope_resolver`; FontFixer and FileRenamer use the same one). The fonts of a run are grouped by name (slope words taken out) and compared: STAT first, then which one's outlines lean more, then the filename, names and flags. nameID 2 and the Upright or Italic in nameIDs 3, 4, 6, 16 and 17 follow that decision, so an Upright file that carries stale Italic flags and names (an Upright file renamed from its Italic partner, say) now gets Regular and Upright instead of "NO CHANGE" on the wrong values.
+- A font alone in its family stays Upright unless its outlines are shown to be upright (then stale italic flags no longer name it Italic) or STAT or the other evidence agrees it is Italic. A font the resolver cannot be sure of (unmeasurable outlines, conflicting evidence, three or more files with one name, a free slope axis) is named from its own tables as before. A line at the start of each run says how many pairs were matched and how many fonts were read from their own tables.
+
 ## [0.12.2] - 2026-11-26
 
 FontCore 0.11.6 vendored (see `FontCore/VENDOR.md`).

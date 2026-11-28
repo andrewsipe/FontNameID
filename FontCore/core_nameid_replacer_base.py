@@ -571,6 +571,45 @@ def clean_variable_family_name(family: str) -> str:
     return strip_variable_tokens(family) or family
 
 
+_SLOPE_DECISIONS: dict = {}
+
+
+def set_slope_decisions(decisions: Optional[dict]) -> None:
+    """The run's family-wide slope decisions (path -> "italic" | "upright"), from ``core_slope_resolver``."""
+    global _SLOPE_DECISIONS
+    _SLOPE_DECISIONS = dict(decisions or {})
+
+
+def slope_decision_for(filepath: str) -> Optional[str]:
+    return _SLOPE_DECISIONS.get(os.path.abspath(str(filepath)))
+
+
+def resolve_run_slope_decisions(font_files: list) -> tuple[dict, int, int]:
+    """Decide Upright or Italic for the fonts of this run together, so a font and its partner are compared.
+
+    Returns (decisions the replacers may act on, pairs matched, fonts left to their own tables). A font the resolver flags,
+    or that has a free slope axis, is not in the decisions. Never raises: with no decisions the replacers read the tables
+    as before."""
+    try:
+        from concurrent.futures import ProcessPoolExecutor
+
+        from FontCore.core_slope_resolver import clear_decisions, gather_evidence, resolve_slopes
+
+        paths = [str(p) for p in font_files if str(p).lower().endswith((".ttf", ".otf"))]
+        if not paths:
+            return {}, 0, 0
+        if len(paths) > 64:
+            with ProcessPoolExecutor(max_workers=min(8, os.cpu_count() or 1)) as executor:
+                evidence = list(executor.map(gather_evidence, paths, chunksize=32))
+        else:
+            evidence = [gather_evidence(p) for p in paths]
+        decisions = resolve_slopes(evidence)
+        pairs = sum(1 for d in decisions if d.role == "pair" and not d.review) // 2
+        return clear_decisions(decisions), pairs, sum(1 for d in decisions if d.review)
+    except Exception:
+        return {}, 0, 0
+
+
 def variable_house_stem(filepath: str) -> Optional[str]:
     """The house-form filename stem for a variable font (what ID6 and ID3 should carry, and what fontrenamer writes), else None."""
     from FontCore.core_variable_filename_parser import format_variable_filename
@@ -591,6 +630,9 @@ def variable_id2_subfamily(font, filepath: str, detected: str) -> str:
     if not traits.is_variable or traits.no_free_axes:
         return detected
     italic = traits.slope == "italic"
+    decided = slope_decision_for(filepath)
+    if decided in ("italic", "upright") and traits.slope != "free":
+        italic = decided == "italic"  # the family-wide decision outranks flags and names that have gone stale
     if "bold" in (detected or "").lower():
         return "Bold Italic" if italic else "Bold"
     return "Italic" if italic else "Regular"
@@ -603,7 +645,7 @@ def resolve_variable_slots_for_replacer(filepath: str):
     """
     from FontCore.core_variable_filename_parser import resolve_variable_slots
 
-    return resolve_variable_slots(filepath)
+    return resolve_variable_slots(filepath, slope_decision=slope_decision_for(filepath))
 
 
 def run_workflow(
@@ -662,8 +704,17 @@ def run_workflow(
         stats.errors = 1
         return {"exit_code": 1, **stats.to_dict()}
 
+    # One Upright/Italic decision for the whole run, made before any name is written
+    decided, pairs_matched, left_alone = resolve_run_slope_decisions(font_files)
+    set_slope_decisions(decided)
+
     # Display header
     show_workflow_header(title, name_id, description, console)
+    if pairs_matched or left_alone:
+        cs.StatusIndicator("info").add_message(
+            f"Slope: {cs.fmt_count(pairs_matched)} Upright/Italic pair(s) matched; {cs.fmt_count(left_alone)} font(s) read "
+            "from their own tables (see FontCore tools/resolve_slopes.py)"
+        ).emit(console=console)
 
     # Show file list (suppress when called from BatchRunner)
     if not batch_context:

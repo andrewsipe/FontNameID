@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fontnameid"
-version = "0.9.1"
+version = "0.13.0"
 description = "Replace, audit and batch-edit OpenType name-table (nameID) records"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -35,4 +35,4 @@ packages = ["fontnameid", "FontCore"]
 testpaths = ["tests"]
 
 [tool.fontcore-vendor]
-modules = ["core_cli_help", "core_console_styles", "core_file_collector", "core_filename_parts_parser", "core_font_style_dictionaries", "core_metadata_catalog", "core_name_attribution", "core_name_policies", "core_nameid_replacer_base", "core_string_utils", "core_ttx_table_io", "core_variable_filename_parser", "core_variable_font_detection", "core_variable_traits"]
+modules = ["core_cli_help", "core_console_styles", "core_file_collector", "core_filename_parts_parser", "core_font_style_dictionaries", "core_metadata_catalog", "core_name_attribution", "core_name_policies", "core_nameid_replacer_base", "core_string_utils", "core_ttx_table_io", "core_slant_measure", "core_slope_resolver", "core_variable_filename_parser", "core_variable_font_detection", "core_variable_traits"]
